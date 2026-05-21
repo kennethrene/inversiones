@@ -192,7 +192,7 @@ def robot_scalping_autosuficiente_xtb():
                             contenido = elemento.get_attribute("title") or elemento.get_attribute("textContent")
                             if not contenido: continue
                             
-                            contenido_limpio = contenido.replace(",", ".")                            
+                            contenido_limpio = contenido.replace(",", ".")
                                 
                             if "MACD" in texto_identificador and "." in contenido_limpio:
                                 partes_macd = [p.strip() for p in contenido_limpio.split(".")]
@@ -207,10 +207,10 @@ def robot_scalping_autosuficiente_xtb():
                                     texto_macd = (
                                         f"📉 HISTOGRAMA MACD\n"
                                         f"  ───────────────────────────────────\n"
-                                        f"   Línea roja  : {num_senal}\n"
-                                        f"   Línea verde : {num_linea}\n"
-                                        f"   Diferencia. : {macd_histograma}\n"
-                                        f"   Línea verde : {texto_tendencia}"                                        
+                                        f"   Línea venta  : {num_senal}\n"
+                                        f"   Línea compra : {num_linea}\n"
+                                        f"   Diferencia   : {macd_histograma}\n"
+                                        f"   Tendencia    : {texto_tendencia}"                                        
                                     )
                             elif "RSI" in texto_identificador:
                                 decimales_rsi = re.findall(r'-?\d+\.\d+|-?\d+', contenido_limpio)
@@ -276,7 +276,7 @@ def robot_scalping_autosuficiente_xtb():
                 ejecutar_cierre = False
                 beneficio_neto = None
                 reporte_trailing_consola = "Esperando activación (% mínimo no alcanzado)"
-                reporte_stop_loss_consola = "Monitoreando riesgo (Ninguna posición abierta)"
+                reporte_stop_loss_consola = "\nNinguna posición abierta"
 
                 if operacion_activa and len(operaciones_detalles) > 0:
                     if hora_apertura_orden is None:
@@ -416,7 +416,7 @@ def robot_scalping_autosuficiente_xtb():
                 print("-" * 75)
                 print(f" ⚛️  OSCILADOR RSI      : {rsi_valor}")
                 print("-" * 75)
-                print(f" 📊 FILTRO IMPULSO ADX : {adx_valor}")
+                print(f" 📊 IMPULSO ADX : {adx_valor}")
                 print("-" * 75)
                 print(f"{lucro_flotante_visible}")
                 print("-" * 75)

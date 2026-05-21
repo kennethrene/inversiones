@@ -5,6 +5,7 @@ import time
 import os
 import re
 import threading
+import traceback
 import pandas as pd
 import numpy as np
 # CONFIGURACIÓN OBLIGATORIA PARA ENTORNO MAC OS (MINICONDA)
@@ -12,206 +13,14 @@ import matplotlib
 matplotlib.use('TkAgg') # Fuerza a tu Mac a abrir la ventana interactiva independiente
 import mplfinance as mpf
 import matplotlib.pyplot as plt
-
-# ===========================================================================
-# ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
-# ===========================================================================
-TEMPORALIDAD_MINUTOS = 1 # Intervalo de corte de la vela (ej: 1, 5, 15)
-RSI_SOBRECOMPRA = 80.0 # Nivel estricto de sobrecompra para ventas
-RSI_SOBREVENTA = 15.0 # Nivel estricto de sobreventa para compras
-ADX_TENDENCIA_FUERTE = 25.0 # Filtro de fuerza obligatorio para operar
-
-# 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
-PORCENTAJE_STOP_LOSS = -10.0 # Límite estricto de pérdida permitida (debe ser NEGATIVO)
-PORCENTAJE_ACTIVACION_TRAILING = 5.0 # % mínimo de ganancia para activar la persecución inteligente
-DISTANCIA_TRAILING_MAXIMA = 2.5 # % máximo que permites que el precio retroceda desde su pico
-TAKE_PROFIT_MONETARIO = 3.0  # 🔥 Modifica este valor por la ganancia deseada
-PORCENTAJE_STOP_LOSS  = -10.0  # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
-
-# PARÁMETROS DE INDICADORES DE DOBLE TECHO / SUELO Y HOMBRE CABEZA HOMBRO
-PORCENTAJE_TOLERANCIA_DOBLE_TS = 0.005
-PORCENTAJE_TOLERANCIA_HCM = 0.008
-
-SEGUNDOS_ENFRIAMIENTO = 60.0  # 🔥 Tiempo mínimo en segundos para esperar entre operaciones
-tiempo_ultimo_cierre = 0.0     # Rastreo del timestamp del último cierre
-# ===========================================================================
-# Estructura global en memoria para compartir los datos entre hilos
-# ===========================================================================
-datos_compartidos = {
-    "df_velas": pd.DataFrame(),
-    "sell": "0.00",
-    "buy": "0.00",
-    "status_patrones": "Recolectando ticks de mercado...",
-    "senal_accion": "🔎 ESPERANDO CONFIGURACIÓN...",
-    "indice_senal": None, # Guarda la estampa de tiempo de la confluencia
-    "tipo_senal": None, # COMPRA o VENTA
-    "rsi_live": "Buscando...",
-    "adx_live": "Buscando...",
-    "lucro": "Sin operaciones abiertas",
-    "trailing_status": "Inactivo"
-}
-
-# 🟢 CONTADORES DE ESTADÍSTICA EN VIVO
-estadisticas_bot = {
-    "ganadas": 0,
-    "perdidas": 0,
-    "total_ordenes": 0,
-    "ultimo_patron_operado": "Ninguno"
-}
-
-hora_apertura_orden = None
-ticks_bloque_actual = []
-lista_velas_acumuladas = []
-historico_cuenta = []
-
-# ===========================================================================
-# 🧠 MOTOR ANALÍTICO INTEGRADO: 10 PATRONES CON TRIPLE CONFLUENCIA
-# ===========================================================================
-def analizar_triple_confluencia(df_velas, rsi_puro, adx_puro):
-    global datos_compartidos
-    
-    datos_compartidos["indice_senal"] = None
-    datos_compartidos["tipo_senal"] = None
-    
-    if len(df_velas) < 3:
-        datos_compartidos["senal_accion"] = "🔎 ESPERANDO HISTORIAL DE VELAS..."
-        return "Construyendo historial de barras..."
-    
-    if rsi_puro is None or adx_puro is None:
-        datos_compartidos["senal_accion"] = "🔎 ESPERANDO LECTURA DE INDICADORES..."
-        return "Faltan osciladores de apoyo en el DOM..."
-        
-    vela_actual = df_velas.iloc[-1] # Vela 3
-    vela_previa = df_velas.iloc[-2] # Vela 2
-    vela_antepenultima = df_velas.iloc[-3] # Vela 1
-    idx_actual = df_velas.index[-1]
-    
-    vela3_valor_abrio, vela3_valor_maximo, vela3_valor_minimo, vela3_valor_cerro = float(vela_actual['Open']), float(vela_actual['High']), float(vela_actual['Low']), float(vela_actual['Close'])
-    cuerpo3 = abs(vela3_valor_cerro - vela3_valor_abrio)
-    es_roja3 = vela3_valor_cerro < vela3_valor_abrio
-    es_verde3 = vela3_valor_cerro > vela3_valor_abrio
-    
-    vela2_valor_abrio, vela2_valor_cerro = float(vela_previa['Open']), float(vela_previa['Close'])
-    cuerpo2 = abs(vela2_valor_cerro - vela2_valor_abrio)
-    
-    vela1_valor_abrio, vela2_valor_cerro = float(vela_antepenultima['Open']), float(vela_antepenultima['Close'])
-    cuerpo1 = abs(vela2_valor_cerro - vela1_valor_abrio)
-    es_verde1 = vela2_valor_cerro > vela1_valor_abrio
-    es_roja1 = vela2_valor_cerro < vela1_valor_abrio
-    
-    tendencia_alcista = False
-    tendencia_bajista = False
-    nombre_patron = "Ninguno"
-    
-    # A. PATRONES COMPUESTOS DE ESTRELLAS (3 VELAS)
-    if es_verde1 and es_roja3 and (cuerpo2 <= (cuerpo1 * 0.35)) and cuerpo3 > 0:
-        mitad_cuerpo_vela1 = vela1_valor_abrio + (cuerpo1 / 2)
-        if vela3_valor_cerro <= mitad_cuerpo_vela1:
-            tendencia_bajista, nombre_patron = True, "Estrella del Atardecer"
-    elif es_roja1 and es_verde3 and (cuerpo2 <= (cuerpo1 * 0.35)) and cuerpo3 > 0:
-        mitad_cuerpo_vela1 = vela2_valor_cerro + (cuerpo1 / 2)
-        if vela3_valor_cerro >= mitad_cuerpo_vela1:
-            tendencia_alcista, nombre_patron = True, "Estrella del Amanecer"
-            
-    # B. PATRONES TRADICIONALES DE 1 Y 2 VELAS
-    if nombre_patron == "Ninguno":
-        cuerpo = cuerpo3
-        mecha_sup = vela3_valor_maximo - max(vela3_valor_abrio, vela3_valor_cerro)
-        mecha_inf = min(vela3_valor_abrio, vela3_valor_cerro) - vela3_valor_minimo
-        rango_total = vela3_valor_maximo - vela3_valor_minimo
-        es_verde = es_verde3
-        cuerpo_p = cuerpo2
-        es_verde_p = vela2_valor_cerro > vela2_valor_abrio
-        tendencia_bajista_previa = vela2_valor_cerro > vela2_valor_cerro and vela2_valor_cerro >= min(vela3_valor_abrio, vela3_valor_cerro)
-        tendencia_alcista_previa = vela2_valor_cerro < vela2_valor_cerro and vela2_valor_cerro < vela3_valor_abrio
-        
-        if rango_total > 0:
-            if es_verde and not es_verde_p and cuerpo > cuerpo_p and vela3_valor_cerro >= vela2_valor_abrio and vela3_valor_abrio <= vela2_valor_cerro:
-                tendencia_alcista, nombre_patron = True, "Envolvente Alcista"
-            elif not es_verde and es_verde_p and cuerpo > cuerpo_p and vela3_valor_cerro <= vela2_valor_abrio and vela3_valor_abrio >= vela2_valor_cerro:
-                tendencia_bajista, nombre_patron = True, "Envolvente Bajista"
-            # 1. MARTILLO
-            elif mecha_inf >= (2 * cuerpo) and mecha_sup <= (0.2 * cuerpo) and tendencia_bajista_previa:
-                tendencia_alcista, nombre_patron = True, "Martillo (Hammer)"
-            # 2. ESTRELLA FUGAZ
-            elif mecha_sup >= (2 * cuerpo) and mecha_inf <= (0.2 * cuerpo) and tendencia_alcista_previa:
-                tendencia_bajista, nombre_patron = True, "Estrella Fugaz"
-            # 3. MARTILLO INVERTIDO
-            elif mecha_sup >= (2 * cuerpo) and mecha_inf <= (0.2 * cuerpo) and tendencia_bajista_previa:
-                tendencia_alcista, nombre_patron = True, "Martillo Invertido"
-            # 4. HOMBRE COLGADO
-            elif mecha_inf >= (2 * cuerpo) and mecha_sup <= (0.2 * cuerpo) and tendencia_alcista_previa:
-                tendencia_bajista, nombre_patron = True, "Hombre Colgado"
-                
-    # C. ESTRUCTURAS COMPLEJAS Y ESCÁNER COMBINATORIO (12 VELAS)
-    if len(df_velas) >= 12 and nombre_patron == "Ninguno":
-        maximos = df_velas['High'].tail(12).astype(float).tolist()
-        minimos = df_velas['Low'].tail(12).astype(float).tolist()
-        
-        picos = []
-        for i in range(1, len(maximos) - 1):
-            if maximos[i] > maximos[i-1] and maximos[i] > maximos[i+1]: picos.append(maximos[i])
-            
-        if len(picos) >= 2:
-            if len(picos) >= 3:
-                for x in range(len(picos) - 2):
-                    for y in range(x + 1, len(picos) - 1):
-                        for z in range(y + 1, len(picos)):
-                            if picos[y] > picos[x] and picos[y] > picos[z] and abs(picos[x] - picos[z]) < (picos[y] * PORCENTAJE_TOLERANCIA_HCM):
-                                tendencia_bajista, nombre_patron = True, "Hombro-Cabeza-Hombro"
-                                break
-                        if tendencia_bajista: break
-                    if tendencia_bajista: break
-            if not tendencia_bajista:
-                for x in range(len(picos) - 1):
-                    for y in range(x + 1, len(picos)):
-                        if abs(picos[x] - picos[y]) < (picos[x] * PORCENTAJE_TOLERANCIA_DOBLE_TS):
-                            tendencia_bajista, nombre_patron = True, "Doble Techo"
-                            break
-                    if tendencia_bajista: break
-                    
-        valles = []
-        for i in range(1, len(minimos) - 1):
-            if minimos[i] < minimos[i-1] and minimos[i] < minimos[i+1]: valles.append(minimos[i])
-            
-        if len(valles) >= 2:
-            if len(valles) >= 3:
-                for x in range(len(valles) - 2):
-                    for y in range(x + 1, len(valles) - 1):
-                        for z in range(y + 1, len(valles)):
-                            if valles[y] < valles[x] and valles[y] < valles[z] and abs(valles[x] - valles[z]) < (valles[x] * PORCENTAJE_TOLERANCIA_HCM):
-                                tendencia_alcista, nombre_patron = True, "HCH Invertido"
-                                break
-                        if tendencia_alcista: break
-                    if tendencia_alcista: break
-            if not tendencia_alcista:
-                for x in range(len(valles) - 1):
-                    for y in range(x + 1, len(valles)):
-                        if abs(valles[x] - valles[y]) < (valles[x] * PORCENTAJE_TOLERANCIA_DOBLE_TS):
-                            tendencia_alcista, nombre_patron = True, "Doble Suelo"
-                            break
-                    if tendencia_alcista: break
-
-    # VALIDACIÓN FINAL
-    if adx_puro >= ADX_TENDENCIA_FUERTE and len(df_velas) >= 12:
-        if tendencia_alcista: # and rsi_puro <= RSI_SOBREVENTA:
-            datos_compartidos["indice_senal"] = idx_actual
-            datos_compartidos["tipo_senal"] = "COMPRA"
-            datos_compartidos["senal_accion"] = f"🟢 COMPRA DETECTADA: {nombre_patron} + RSI LOW + ADX FUERTE 🔥 "
-            return f"COMPRA_{nombre_patron}"
-        elif tendencia_bajista: #and rsi_puro >= RSI_SOBRECOMPRA:
-            datos_compartidos["indice_senal"] = idx_actual
-            datos_compartidos["tipo_senal"] = "VENTA"
-            datos_compartidos["senal_accion"] = f"🔴 VENTA DETECTADA: {nombre_patron} + RSI HIGH + ADX FUERTE 🔥 "
-            return f"VENTA_{nombre_patron}"
-        
-    datos_compartidos["senal_accion"] = "🔎 MERCADO EN RANGO / NEUTRAL (Buscando confluencias...)"
-    return "Analizando la acción del precio..."
+import config
+from patrones.identificar_patrones import identificar_patrones
+from extraction.extract import extraer_velas
 
 # ===========================================================================
 # 📊 AUXILIAR: EXTRACCIÓN DE DATOS FILTRADOS POR COLUMNA DESDE EL DOM
 # ===========================================================================
-def extraer_diccionario_datos_corregido(lista_cruda):
+def extraer_datos(lista_cruda):
     """
     Procesa la lista plana de strings reales de xStation eliminando espacios
     invisibles y aislando las cadenas puras para cada columna del bot.
@@ -263,7 +72,8 @@ def extraer_diccionario_datos_corregido(lista_cruda):
 # ⚡ ROBOT GRABADOR, EJECUTADOR Y GESTOR DE RIESGO
 # ===========================================================================
 def robot_grabador_ticks_xtb():
-    global datos_compartidos, ticks_bloque_actual, lista_velas_acumuladas, estadisticas_bot, tiempo_ultimo_cierre
+    global datos_compartidos, ticks_bloque_actual, lista_velas_acumuladas, estadisticas_bot, tiempo_ultimo_cierre, historico_volumen, promedio_volumen
+    global promedio_volumen_sin_actual, motivo_cierre_stats, error
     opciones = Options()
     opciones.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
     
@@ -275,34 +85,49 @@ def robot_grabador_ticks_xtb():
         
         bloqueo_orden_vela = False
         minuto_ultima_orden = ""
+        texto_macd = ""
+        texto_volumen = ""
         
-        # 🔥 SOLUCIÓN 1: Variables persistentes fuera del bucle de mercado para evitar reinicios continuos
+        # Variables persistentes fuera del bucle de mercado para evitar reinicios continuos
         maximo_rendimiento_alcanzado = -999.0
         trailing_activado = False
         resultado_confluencia = "Ninguno"
         
-        print(" [+] Conexión exitosa con Chrome DevTools en el puerto 9222.")
+        print("Conexión exitosa con Chrome DevTools en el puerto 9222.")
         
         while True:
             try:
                 todos_los_sell = driver.find_elements(By.ID, "sellButton")
                 todos_los_buy = driver.find_elements(By.ID, "buyButton")
+                todos_los_activos = driver.find_elements(By.CLASS_NAME, "chart-panel-symbol-title")
                 todos_los_lotes = driver.find_elements(By.CSS_SELECTOR, "span.ui-spinner-amount-value, input[name='stepperInput'], [id='volumeInput']")
                 
                 precio_sell_visible, precio_buy_visible = "0.00", "0.00"
                 boton_compra_real, boton_venta_real = None, None
                 lote_visible = "No detectado"
-                
+                activo_detectado = None
+
+                for activo in todos_los_activos:
+                    if activo.is_displayed():
+                        texto_bruto = activo.get_attribute("textContent")
+                        if texto_bruto:
+                            activo_detectado = texto_bruto.replace("CFD", "").strip()
+                            break
+     
+                if activo_detectado != config.activo_actual:
+                    config.activo_actual = activo_detectado
+                    extraer_datos_velas()
+
                 for boton in todos_los_sell:
                     if boton.is_displayed() and boton.is_enabled():
                         precio_sell_visible = boton.get_attribute("textContent").strip()
-                        datos_compartidos["sell"] = precio_sell_visible
+                        config.datos_compartidos["sell"] = precio_sell_visible
                         boton_venta_real = boton
                         break
                 for boton in todos_los_buy:
                     if boton.is_displayed() and boton.is_enabled():
                         precio_buy_visible = boton.get_attribute("textContent").strip()
-                        datos_compartidos["buy"] = precio_buy_visible
+                        config.datos_compartidos["buy"] = precio_buy_visible
                         boton_compra_real = boton
                         break
                 for vol in todos_los_lotes:
@@ -315,8 +140,10 @@ def robot_grabador_ticks_xtb():
                         limpio = "".join(re.findall(r'[\d\.]', precio_buy_visible.replace(",", "")))
                         precio_numerico = float(limpio)
                         if precio_numerico > 0: 
-                            ticks_bloque_actual.append(precio_numerico)
-                    except Exception: pass
+                            config.ticks_bloque_actual.append(precio_numerico)
+                    except Exception: 
+                        config.error = traceback.format_exc()
+                        pass
                     
                 xpath_indicadores = "//*[contains(@class, 'indicator-value-label')] | //span[contains(@class, 'chart-indicator-value')]"
                 elementos_indicadores = driver.find_elements(By.XPATH, xpath_indicadores)
@@ -324,21 +151,46 @@ def robot_grabador_ticks_xtb():
                 
                 for elemento in elementos_indicadores:
                     if elemento.is_displayed():
-                        try: texto_id = elemento.find_element(By.XPATH, "./..").get_attribute("textContent").upper()
-                        except: texto_id = ""
+                        try: texto_identificador = elemento.find_element(By.XPATH, "./..").get_attribute("textContent").upper()
+                        except: texto_identificador = ""
                         contenido = elemento.get_attribute("title") or elemento.get_attribute("textContent")
                         if not contenido: continue
-                        if "RSI" in texto_id or "STOCH" in texto_id:
-                            decimales_rsi = re.findall(r'-?\d+\.\d+|-?\d+', contenido)
-                            if decimales_rsi: num_rsi_leido = float(decimales_rsi[-1]); datos_compartidos["rsi_live"] = f"{num_rsi_leido:.2f}"
-                        elif "ADX" in texto_id or "DI" in texto_id:
-                            decimales_adx = re.findall(r'-?\d+\.\d+|-?\d+', contenido)
-                            if decimales_adx: num_adx_leido = float(decimales_adx[0]); datos_compartidos["adx_live"] = f"{num_adx_leido:.2f}"
-                            
-                if num_rsi_leido is None: num_rsi_leido = 50.0; datos_compartidos["rsi_live"] = "--- (Fijo/DOM Oculto)"
-                if num_adx_leido is None: num_adx_leido = 35.0; datos_compartidos["adx_live"] = "--- (Fijo/DOM Oculto)"
+                        
+                        contenido_limpio = contenido.replace(",", ".")
 
-                if num_adx_leido >= ADX_TENDENCIA_FUERTE:
+                        if "RSI" in texto_identificador:
+                            decimales_rsi = re.findall(r'-?\d+\.\d+|-?\d+', contenido)
+                            if decimales_rsi: num_rsi_leido = float(decimales_rsi[-1]); config.datos_compartidos["rsi_live"] = f"{num_rsi_leido:.2f}"
+                        elif "ADX" in texto_identificador:
+                            decimales_adx = re.findall(r'-?\d+\.\d+|-?\d+', contenido)
+                            if decimales_adx: num_adx_leido = float(decimales_adx[0]); config.datos_compartidos["adx_live"] = f"{num_adx_leido:.2f}"
+                        elif "MACD" in texto_identificador and "." in contenido_limpio:
+                            partes_macd = [p.strip() for p in contenido_limpio.split(".")]
+                            if len(partes_macd) >= 2:
+                                decimales_macd = re.findall(r'-?\d+\.\d+|-?\d+', contenido_limpio)
+                                num_linea = float(decimales_macd[0])
+                                num_senal = float(decimales_macd[1])
+                                valor_hist = num_linea - num_senal
+                                macd_histograma = f"{valor_hist:.2f}"
+                                texto_tendencia = "🔴 A LA BAJA" if valor_hist < 0 else "🟢 AL ALZA"
+
+                                texto_macd = (
+                                    f" 📉 HISTOGRAMA MACD\n"
+                                    f"  ───────────────────────────────────\n"
+                                    f"   Línea venta  : {num_senal}\n"
+                                    f"   Línea compra : {num_linea}\n"
+                                    f"   Diferencia   : {macd_histograma}\n"
+                                    f"   Tendencia    : {texto_tendencia}" 
+                                )
+                        elif "VOL" in texto_identificador:
+                            if contenido != "n/a":
+                                valor_volumen = int(contenido)
+                                texto_volumen = f" 🔋 HISTORICO DE VOLUMEN: {config.historico_volumen}"
+                            
+                if num_rsi_leido is None: num_rsi_leido = 50.0; config.datos_compartidos["rsi_live"] = "--- (Fijo/DOM Oculto)"
+                if num_adx_leido is None: num_adx_leido = 35.0; config.datos_compartidos["adx_live"] = "--- (Fijo/DOM Oculto)"
+
+                if num_adx_leido >= config.ADX_TENDENCIA_FUERTE:
                     adx_valor = f"{num_adx_leido:.2f} 🔥 (Tendencia Fuerte)"
                 else:
                     adx_valor = f"{num_adx_leido:.2f} 💤 (Mercado Lateral)"
@@ -383,20 +235,21 @@ def robot_grabador_ticks_xtb():
                 total_posiciones = resultado_shadow["total"]
                 operaciones_detalles = resultado_shadow["detalles"]
                 
-                datos_compartidos["lucro"] = "Sin operaciones abiertas"
-                datos_compartidos["trailing_status"] = "Inactivo"
+                config.datos_compartidos["lucro"] = "Sin operaciones abiertas"
+                config.datos_compartidos["trailing_status"] = "Inactivo"
                 ejecutar_cierre = False
                 operacion_activa = total_posiciones > 0
                 operacion_ganada = False
+                reporte_stop_loss_consola = "\nNinguna posición abierta"
 
                 if operacion_activa and len(operaciones_detalles) > 0:
                     global hora_apertura_orden
-                    if hora_apertura_orden is None:
-                        hora_apertura_orden = time.time()
+                    if config.hora_apertura_orden is None:
+                        config.hora_apertura_orden = time.time()
                         maximo_rendimiento_alcanzado = -999.0  
                         trailing_activado = False
 
-                    om = extraer_diccionario_datos_corregido(operaciones_detalles)
+                    om = extraer_datos(operaciones_detalles)
                     
                     try:
                         texto_porcentaje = str(om["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
@@ -406,37 +259,38 @@ def robot_grabador_ticks_xtb():
                         rendimiento_actual = 0.0
 
                     reporte_stop_loss_consola = (
-                        f"🔴 FIJADO: {PORCENTAJE_STOP_LOSS:.1f}%\n"
+                        f"🔴 FIJADO: {config.PORCENTAJE_STOP_LOSS:.1f}%\n"
                         f"🔴 ACTUAL: {rendimiento_actual:+.2f}%"
                     )
 
-                    if rendimiento_actual <= PORCENTAJE_STOP_LOSS:
-                        motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
+                    if rendimiento_actual <= config.PORCENTAJE_STOP_LOSS:
+                        config.motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
                         operacion_ganada = False
                         ejecutar_cierre = True
                     
                     if rendimiento_actual > maximo_rendimiento_alcanzado:
                         maximo_rendimiento_alcanzado = rendimiento_actual
                         
-                    if maximo_rendimiento_alcanzado >= PORCENTAJE_ACTIVACION_TRAILING:
+                    if maximo_rendimiento_alcanzado >= config.PORCENTAJE_ACTIVACION_TRAILING:
                         trailing_activado = True
 
                     if trailing_activado:                        
                         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
                         reporte_trailing_consola = (
                             f"🔥 ACTIVADO\n"
-                            f"🔥 MAXIMO: +{maximo_rendimiento_alcanzado:.2f}%\n"
-                            f"🔥 CAIDA DESDE PICO: {caida_desde_pico:.2f}%\n"
-                            f"🔥 TRAILING STOP LÍMITE: {DISTANCIA_TRAILING_MAXIMA}%"
+                            f"🔥 MAXIMO RENDIMIENTO ALCANZADO: +{maximo_rendimiento_alcanzado:.2f}%\n"
+                            f"🔥 CAIDA DESDE EL ULTIMO PICO: {caida_desde_pico:.2f}%\n"
+                            f"🔥 % ACTIVACION DE TRAILING: {config.PORCENTAJE_ACTIVACION_TRAILING}%\n"
+                            f"🔥 TRAILING STOP: {config.DISTANCIA_TRAILING_MAXIMA}%"
                         )
-                        datos_compartidos["trailing_status"] = f"Trailing Activo (Máx: +{maximo_rendimiento_alcanzado:.2f}%)"
+                        config.datos_compartidos["trailing_status"] = f"Trailing Activo (Máx: +{maximo_rendimiento_alcanzado:.2f}%)"
                         
-                        if caida_desde_pico >= DISTANCIA_TRAILING_MAXIMA:
-                            motivo_cierre_stats = f"Win Trailing ({rendimiento_actual:+.2f}%)"
+                        if caida_desde_pico >= config.DISTANCIA_TRAILING_MAXIMA:
+                            config.motivo_cierre_stats = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
                             ejecutar_cierre = True
                             operacion_ganada = True
                     else:
-                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {PORCENTAJE_ACTIVACION_TRAILING}%)"
+                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {config.PORCENTAJE_ACTIVACION_TRAILING}%)"
 
                     icono_beneficio = "🟢" if rendimiento_actual >= 0 else "🔴"
 
@@ -449,128 +303,147 @@ def robot_grabador_ticks_xtb():
                         f"   📊 Precio Actual:    {om['Precio Actual']}\n"
                         f"   {icono_beneficio} Beneficio Neto:   {om['Beneficio Neto']} ({om['Beneficio %']})"
                     )
-                    datos_compartidos["lucro"] = f"{om['Beneficio Neto']} ({om['Beneficio %']})"
+                    config.datos_compartidos["lucro"] = f"{om['Beneficio Neto']} ({om['Beneficio %']})"
 
                     beneficio_neto = float(str(om['Beneficio Neto']).replace(",", ".").replace(" ", ""))
 
-                    if beneficio_neto >= TAKE_PROFIT_MONETARIO:
+                    if beneficio_neto >= config.TAKE_PROFIT_MONETARIO:
                         ejecutar_cierre = True
                         operacion_ganada = True
-                        motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
+                        config.motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
                 else:
                     lucro_flotante_visible = "Sin operaciones abiertas"
                     reporte_trailing_consola = f"💤 Inactivo"
-                    hora_apertura_orden = None
+                    config.hora_apertura_orden = None
 
-                if int(minuto_actual) % TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
-                    if time.time() - tiempo_ultimo_cierre < SEGUNDOS_ENFRIAMIENTO:
+                if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
+                    if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
                         continue
 
-                    if len(ticks_bloque_actual) > 0:
+                    if len(config.ticks_bloque_actual) > 0:
                         nueva_vela_ohlc = {
-                            "Open": ticks_bloque_actual[0], 
-                            "High": max(ticks_bloque_actual), 
-                            "Low": min(ticks_bloque_actual), 
-                            "Close": ticks_bloque_actual[-1]
+                            "Open": config.ticks_bloque_actual[0], 
+                            "High": max(config.ticks_bloque_actual), 
+                            "Low": min(config.ticks_bloque_actual), 
+                            "Close": config.ticks_bloque_actual[-1]
                         }
-                        lista_velas_acumuladas.append(nueva_vela_ohlc)
-                        ticks_bloque_actual = []
+
+                        config.lista_velas_acumuladas.append(nueva_vela_ohlc)
+                        config.ticks_bloque_actual = []
                         minuto_anterior = minuto_actual
-                        df_historial_total = pd.DataFrame(lista_velas_acumuladas)
-                        df_historial_total.index = pd.date_range(start="2026-01-01 09:30", periods=len(df_historial_total), freq=f"{TEMPORALIDAD_MINUTOS}min")
+                        df_historial_total = pd.DataFrame(config.lista_velas_acumuladas)
+                        df_historial_total.index = pd.date_range(start="2026-01-01 09:30", periods=len(df_historial_total), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
                         
-                        resultado_confluencia = analizar_triple_confluencia(df_historial_total, num_rsi_leido, num_adx_leido)
-                        datos_compartidos["status_patrones"] = resultado_confluencia
-                        datos_compartidos["df_velas"] = df_historial_total
+                        resultado_confluencia = identificar_patrones(df_historial_total, num_adx_leido)
+                        config.datos_compartidos["status_patrones"] = resultado_confluencia
+                        config.datos_compartidos["df_velas"] = df_historial_total
+                        
+                        try:
+                            valor_numerico = float(macd_histograma)
+                            config.historico_macd.append(valor_numerico)
+                        except (ValueError, TypeError):
+                            config.error = "⚠️ No se pudo guardar: el valor del MACD no es numérico."
+
+                        if len(config.historico_macd) > 2:
+                            config.historico_macd.pop(0)
+
+                        config.historico_volumen.append(valor_volumen)                        
+                        if len(config.historico_volumen) > 6:
+                            config.historico_volumen.pop(0)
+                            config.promedio_volumen = sum(config.historico_volumen)
+                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1])
 
                 # Ejecución automática de operaciones bajo confluencia estricta
                 if not operacion_activa:    
-                    if not bloqueo_orden_vela and num_adx_leido >= ADX_TENDENCIA_FUERTE:
+                    if not bloqueo_orden_vela and num_adx_leido >= config.ADX_TENDENCIA_FUERTE:
                         if "COMPRA" in resultado_confluencia and boton_compra_real:
                             boton_compra_real.click()
                             os.system('say "Comprando" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
-                            hora_apertura_orden = time.time()
-                            estadisticas_bot["total_ordenes"] += 1
-                            estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
+                            config.hora_apertura_orden = time.time()
+                            config.estadisticas_bot["total_ordenes"] += 1
+                            config.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
                         elif "VENTA" in resultado_confluencia and boton_venta_real:
                             boton_venta_real.click()
                             os.system('say "Vendiendo" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
-                            hora_apertura_orden = time.time()
-                            estadisticas_bot["total_ordenes"] += 1
-                            estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]                        
+                            config.hora_apertura_orden = time.time()
+                            config.estadisticas_bot["total_ordenes"] += 1
+                            config.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]                        
                 
                 # MÓDULO DE ACCIÓN DE CIERRE
                 if ejecutar_cierre and operacion_activa:
                     try:
                         driver.execute_script("if(window.ultimoBotonCierre) { window.ultimoBotonCierre.click(); }")
-                        os.system(f'say "Posición cerrada por {motivo_cierre_stats}" &')
+                        os.system(f'say "Posición cerrada por {config.motivo_cierre_stats}" &')
                         
                         if operacion_ganada:
-                            estadisticas_bot["ganadas"] += 1
+                            config.estadisticas_bot["ganadas"] += 1
                         else:
-                            estadisticas_bot["perdidas"] += 1
+                            config.estadisticas_bot["perdidas"] += 1
                             
-                        historico_cuenta.append(beneficio_neto)
-                        tiempo_ultimo_cierre = time.time()
-                        hora_apertura_orden = None
+                        config.historico_cuenta.append(beneficio_neto)
+                        config.tiempo_ultimo_cierre = time.time()
+                        config.hora_apertura_orden = None
                         trailing_activado = False
                         maximo_rendimiento_alcanzado = -999.0
                         lucro_flotante_visible = "Sin operaciones abiertas"
                         time.sleep(5)
                     except Exception as error_ejecucion:
-                        print(f" [-] Error crítico enviando el comando de click: {error_ejecucion}")
+                        config.error = traceback.format_exc()
                     
-                win_rate = (estadisticas_bot["ganadas"] / estadisticas_bot["total_ordenes"] * 100) if estadisticas_bot["total_ordenes"] > 0 else 0.0
+                win_rate = (config.estadisticas_bot["ganadas"] / config.estadisticas_bot["total_ordenes"] * 100) if config.estadisticas_bot["total_ordenes"] > 0 else 0.0
                 
-                if datos_compartidos["sell"] != ultimo_sell or datos_compartidos["buy"] != ultimo_buy:
-                    ultimo_sell, ultimo_buy = datos_compartidos["sell"], datos_compartidos["buy"]
+                if config.datos_compartidos["sell"] != ultimo_sell or config.datos_compartidos["buy"] != ultimo_buy:
+                    ultimo_sell, ultimo_buy = config.datos_compartidos["sell"], config.datos_compartidos["buy"]
                     os.system(comando_limpiar)
                     print("=" * 75)
                     print(f" ROBOT OPERATIVO AUTOMATIZADO XTB | SISTEMA DE CONTROL TOTAL BLINDADO")
-                    print(f" Servidor activo: {time.strftime('%H:%M:%S')} | Lote: {lote_visible}")
+                    print(f" Servidor activo: {time.strftime('%H:%M:%S')} | Lote: {lote_visible} | Activo: {config.activo_actual}")
                     print("=" * 75)
-                    print(f" 🔴 PRECIO REAL VENDER (SELL) : {datos_compartidos['sell']}")
-                    print(f" 🟢 PRECIO REAL COMPRAR (BUY) : {datos_compartidos['buy']}")
+                    print(f" 🔴 PRECIO ASK (SELL) : {config.datos_compartidos['sell']}")
+                    print(f" 🟢 PPRECIO BID (BUY) : {config.datos_compartidos['buy']}")
                     print("-" * 75)
-                    print(f" 💰 MONITOREO DE OSCILADORES EN VIVO DESDE TU XSTATION:")
-                    print(f" ↳ Valor actual del RSI (14) : {datos_compartidos['rsi_live']}")
-                    print(f" ↳ Valor actual del ADX (14) : {adx_valor}")
+                    print(f"{texto_macd}")
                     print("-" * 75)
-                    print(f" 🛡 MONITOR GESTIÓN DE RIESGO DE OPERACIONES ABIERTAS:")
+                    print(f"{texto_volumen}")
+                    print("-" * 75)
+                    print(f" ⚛️  OSCILADOR RSI : {config.datos_compartidos['rsi_live']}")
+                    print("-" * 75)
+                    print(f" 📊 IMPULSO ADX : {adx_valor}")                    
                     print("-" * 75)
                     print(f"{lucro_flotante_visible}")
                     print("-" * 75)
-                    print(f"🧭 TRAILING STOP : {reporte_trailing_consola}")
+                    print(f" 🧭 TRAILING STOP : {reporte_trailing_consola}")
                     print("-" * 75)
-                    print(f"🧭 STOP LOSS ACTUAL")
+                    print(f" 🧭 STOP LOSS ACTUAL")
                     print(f"{reporte_stop_loss_consola}")
                     print("-" * 75)
-                    print(f"💰 TAKE PROFIT : {TAKE_PROFIT_MONETARIO}")
+                    print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
                     print("-" * 75)
-                    print(f"🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
+                    print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                     print("=" * 75)
                     print(f" 🧭 GATILLO DE CONFLUENCIA CONFIRMADO")
-                    print(f" {datos_compartidos['senal_accion']}")
+                    print(f" {config.datos_compartidos['senal_accion']}")
                     print("-" * 75)
                     print(f" 📊 CUADRO DE ESTADÍSTICAS Y MÉTRICAS DE EFECTIVIDAD (HOY):")
-                    print(f" ↳ Operaciones Ganadas 🟢 : {estadisticas_bot['ganadas']}")
-                    print(f" ↳ Operaciones Perdidas 🔴 : {estadisticas_bot['perdidas']}")
-                    print(f" ↳ Total Ejecutadas ⚡ : {estadisticas_bot['total_ordenes']}")
+                    print(f" ↳ Operaciones Ganadas  🟢 : {config.estadisticas_bot['ganadas']}")
+                    print(f" ↳ Operaciones Perdidas 🔴 : {config.estadisticas_bot['perdidas']}")
+                    print(f" ↳ Total Ejecutadas ⚡ : {config.estadisticas_bot['total_ordenes']}")
                     print(f" ↳ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate")
-                    print(f" ↳ Histórico de la cuenta  : {historico_cuenta}")
-                    print(f" ↳ Ultimo cierre           : {motivo_cierre_stats}")
+                    print(f" ↳ Histórico de la cuenta  : {config.historico_cuenta}")
+                    print(f" ↳ Ultimo cierre           : {config.motivo_cierre_stats}")
                     print("=" * 75)
+                    print(f"🔴 Ultimo error            : {config.error}")
                     
-            except Exception as e:
-                # Muestra errores internos de mapeo sin colapsar el hilo de Selenium
+            except Exception as error_ejecucion:
+                config.error = traceback.format_exc()
                 pass
             time.sleep(0.1)
     except Exception as e: 
-        print(f"[-] Error de enlace central: {e}")
+        config.error = traceback.format_exc()
 
 # ===========================================================================
 # 📈 MOTOR GRÁFICO REAL TIME PARA MAC OS (NATIVO ASÍNCRONO)
@@ -580,9 +453,9 @@ from matplotlib.animation import FuncAnimation
 def loop_render_grafico(frame, fig, ax):
     """Refresca la GUI de manera segura interactuando directamente con Matplotlib."""
     try:
-        df_actual = datos_compartidos["df_velas"].copy()
-        idx_senal = datos_compartidos["indice_senal"]
-        tipo_sig = datos_compartidos["tipo_senal"]
+        df_actual = config.datos_compartidos["df_velas"].copy()
+        idx_senal = config.datos_compartidos["indice_senal"]
+        tipo_sig = config.datos_compartidos["tipo_senal"]
         
         # Generar set de prueba inicial para que el gráfico no nazca vacío
         if df_actual.empty:
@@ -610,8 +483,15 @@ def loop_render_grafico(frame, fig, ax):
             mpf.plot(df_actual, type='candle', ax=ax, style='charles', datetime_format='%H:%M')
             
         fig.canvas.draw_idle() # Redibujo eficiente optimizado para backend TkAgg
-    except Exception:
+    except Exception as e:
+        config.error = traceback.format_exc()
         pass
+
+def extraer_datos_velas():
+    config.lista_velas_acumuladas = extraer_velas(config.activo_actual)
+    df_historial_total = pd.DataFrame(config.lista_velas_acumuladas)
+    config.datos_compartidos["df_velas"] = df_historial_total
+    df_historial_total.index = pd.date_range(start="2026-01-01 09:30", periods=len(df_historial_total), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
 
 def iniciar_renderizado_grafico_mac():
     # Inicialización de la figura y el eje nativo
