@@ -26,7 +26,6 @@ def analizar_patrones():
 
         volumen_velas_anteriores_ok = config.promedio_volumen_sin_actual != None and len(config.historico_volumen) > 0 and config.historico_volumen[-1] > config.promedio_volumen_sin_actual * 1.3
         mechas_ok_martillo = mecha_inf >= (2 * vela3_cuerpo) and mecha_sup < (0.2 * vela3_cuerpo)
-        mechas_ok_martillo_rojo = (mecha_inf >= 2 * vela3_cuerpo) and (mecha_sup <= 0.2 * vela3_cuerpo)
         mechas_ok_martillo_inv = mecha_sup >= (2 * vela3_cuerpo) and mecha_inf < (0.2 * vela3_cuerpo)
 
         mechas_ok_estrella_fugaz = mecha_sup >= (2 * vela3_cuerpo) and mecha_inf <= (0.2 * vela3_cuerpo)

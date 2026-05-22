@@ -1,4 +1,5 @@
 from tvDatafeed import TvDatafeed, Interval
+import config
 
 symbols = {
     "US100": "NAS100",
@@ -18,16 +19,16 @@ symbols = {
     "EURUSD": "EURUSD"
 }
 
-def extraer_velas(nombre):
+def extraer_velas():
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
 
     # 2. Descargar las últimas 60 velas de FX:NAS100
     df = tv.get_hist(
-        symbol=symbols.get(nombre),
+        symbol=symbols.get(config.activo_actual),
         exchange='FX', 
-        interval=Interval.in_1_minute, 
-        n_bars=60
+        interval=Interval.in_1_minute,
+        n_bars=61
     )
 
     # 3. Procesar, renombrar columnas y convertir al formato solicitado
@@ -36,6 +37,6 @@ def extraer_velas(nombre):
         df.columns = ['Open', 'High', 'Low', 'Close']
         data = df.to_dict(orient='records')
 
-        return data
+        return data[:-1]
     else:
-        print("Error: No se recibieron datos de TradingView.")
+        config.error = "Error: No se recibieron datos de TradingView"

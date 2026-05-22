@@ -72,8 +72,8 @@ def extraer_datos(lista_cruda):
 # ⚡ ROBOT GRABADOR, EJECUTADOR Y GESTOR DE RIESGO
 # ===========================================================================
 def robot_grabador_ticks_xtb():
-    global datos_compartidos, ticks_bloque_actual, lista_velas_acumuladas, estadisticas_bot, tiempo_ultimo_cierre, historico_volumen, promedio_volumen
-    global promedio_volumen_sin_actual, motivo_cierre_stats, error
+    global datos_compartidos, lista_velas_acumuladas, estadisticas_bot, tiempo_ultimo_cierre, historico_volumen, promedio_volumen
+    global promedio_volumen_sin_actual, motivo_cierre_stats, error, df_historial_total
     opciones = Options()
     opciones.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
     
@@ -87,6 +87,7 @@ def robot_grabador_ticks_xtb():
         minuto_ultima_orden = ""
         texto_macd = ""
         texto_volumen = ""
+        valor_volumen = 0
         
         # Variables persistentes fuera del bucle de mercado para evitar reinicios continuos
         maximo_rendimiento_alcanzado = -999.0
@@ -116,6 +117,8 @@ def robot_grabador_ticks_xtb():
      
                 if activo_detectado != config.activo_actual:
                     config.activo_actual = activo_detectado
+                    config.promedio_volumen = 0
+                    config.promedio_volumen_sin_actual = 0
                     extraer_datos_velas()
 
                 for boton in todos_los_sell:
@@ -135,16 +138,6 @@ def robot_grabador_ticks_xtb():
                         texto_vol = vol.get_attribute("value") if vol.tag_name == "input" else vol.get_attribute("textContent").strip()
                         if texto_vol: lote_visible = texto_vol.replace("USD", "").strip(); break
                         
-                if precio_buy_visible != "0.00":
-                    try:
-                        limpio = "".join(re.findall(r'[\d\.]', precio_buy_visible.replace(",", "")))
-                        precio_numerico = float(limpio)
-                        if precio_numerico > 0: 
-                            config.ticks_bloque_actual.append(precio_numerico)
-                    except Exception: 
-                        config.error = traceback.format_exc()
-                        pass
-                    
                 xpath_indicadores = "//*[contains(@class, 'indicator-value-label')] | //span[contains(@class, 'chart-indicator-value')]"
                 elementos_indicadores = driver.find_elements(By.XPATH, xpath_indicadores)
                 num_rsi_leido, num_adx_leido = None, None
@@ -180,12 +173,19 @@ def robot_grabador_ticks_xtb():
                                     f"   Línea venta  : {num_senal}\n"
                                     f"   Línea compra : {num_linea}\n"
                                     f"   Diferencia   : {macd_histograma}\n"
-                                    f"   Tendencia    : {texto_tendencia}" 
+                                    f"   Tendencia    : {texto_tendencia}\n"
+                                    f"   Histórico    : {config.historico_macd}"
                                 )
                         elif "VOL" in texto_identificador:
                             if contenido != "n/a":
                                 valor_volumen = int(contenido)
-                                texto_volumen = f" 🔋 HISTORICO DE VOLUMEN: {config.historico_volumen}"
+                                texto_volumen = (
+                                    f" 🔋 VOLUMEN\n"                                   
+                                    f"  ───────────────────────────────────\n"
+                                    f"    Histórico                : {config.historico_volumen}\n"
+                                    f"    Promedio                 : {config.promedio_volumen}\n"
+                                    f"    Promedio sin el actual   : {config.promedio_volumen_sin_actual}"
+                                )
                             
                 if num_rsi_leido is None: num_rsi_leido = 50.0; config.datos_compartidos["rsi_live"] = "--- (Fijo/DOM Oculto)"
                 if num_adx_leido is None: num_adx_leido = 35.0; config.datos_compartidos["adx_live"] = "--- (Fijo/DOM Oculto)"
@@ -320,38 +320,28 @@ def robot_grabador_ticks_xtb():
                     if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
                         continue
 
-                    if len(config.ticks_bloque_actual) > 0:
-                        nueva_vela_ohlc = {
-                            "Open": config.ticks_bloque_actual[0], 
-                            "High": max(config.ticks_bloque_actual), 
-                            "Low": min(config.ticks_bloque_actual), 
-                            "Close": config.ticks_bloque_actual[-1]
-                        }
+                    extraer_datos_velas()
+                    resultado_confluencia = identificar_patrones(config.historico_velas, num_adx_leido)
+                    config.datos_compartidos["status_patrones"] = resultado_confluencia
+                    minuto_anterior = minuto_actual
 
-                        config.lista_velas_acumuladas.append(nueva_vela_ohlc)
-                        config.ticks_bloque_actual = []
-                        minuto_anterior = minuto_actual
-                        df_historial_total = pd.DataFrame(config.lista_velas_acumuladas)
-                        df_historial_total.index = pd.date_range(start="2026-01-01 09:30", periods=len(df_historial_total), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
-                        
-                        resultado_confluencia = identificar_patrones(df_historial_total, num_adx_leido)
-                        config.datos_compartidos["status_patrones"] = resultado_confluencia
-                        config.datos_compartidos["df_velas"] = df_historial_total
-                        
-                        try:
-                            valor_numerico = float(macd_histograma)
-                            config.historico_macd.append(valor_numerico)
-                        except (ValueError, TypeError):
-                            config.error = "⚠️ No se pudo guardar: el valor del MACD no es numérico."
+                    try:
+                        valor_numerico = float(macd_histograma)
+                        config.historico_macd.append(valor_numerico)
+                    except (ValueError, TypeError):
+                        config.error = "⚠️ No se pudo guardar: el valor del MACD no es numérico."
 
-                        if len(config.historico_macd) > 2:
-                            config.historico_macd.pop(0)
+                    if len(config.historico_macd) > 2:
+                        config.historico_macd.pop(0)
 
-                        config.historico_volumen.append(valor_volumen)                        
-                        if len(config.historico_volumen) > 6:
-                            config.historico_volumen.pop(0)
-                            config.promedio_volumen = sum(config.historico_volumen)
-                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1])
+                    config.historico_volumen.append(valor_volumen)
+                    if len(config.historico_volumen) > 6:
+                        config.historico_volumen.pop(0)
+                        config.promedio_volumen = sum(config.historico_volumen) / 6
+                        config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1]) / 5
+                    elif len(config.historico_volumen) > 0:
+                        config.promedio_volumen = sum(config.historico_volumen) / len(config.historico_volumen)
+                        config.promedio_volumen_sin_actual = sum(config.historico_volumen[:-1]) / len(config.historico_volumen[:-1]) if len(config.historico_volumen) > 1 else 0
 
                 # Ejecución automática de operaciones bajo confluencia estricta
                 if not operacion_activa:    
@@ -419,24 +409,27 @@ def robot_grabador_ticks_xtb():
                     print(f" 🧭 TRAILING STOP : {reporte_trailing_consola}")
                     print("-" * 75)
                     print(f" 🧭 STOP LOSS ACTUAL")
-                    print(f"{reporte_stop_loss_consola}")
+                    print("─" * 40)
+                    print(f"  {reporte_stop_loss_consola}")
                     print("-" * 75)
                     print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
                     print("-" * 75)
                     print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                     print("=" * 75)
-                    print(f" 🧭 GATILLO DE CONFLUENCIA CONFIRMADO")
-                    print(f" {config.datos_compartidos['senal_accion']}")
+                    print(f" 🧭 PATRONES")
+                    print("─" * 40)
+                    print(f"    {config.datos_compartidos['senal_accion']}")
+                    print(f"    Ultimo patrón detectado: {config.ultimo_patron}")
                     print("-" * 75)
                     print(f" 📊 CUADRO DE ESTADÍSTICAS Y MÉTRICAS DE EFECTIVIDAD (HOY):")
-                    print(f" ↳ Operaciones Ganadas  🟢 : {config.estadisticas_bot['ganadas']}")
-                    print(f" ↳ Operaciones Perdidas 🔴 : {config.estadisticas_bot['perdidas']}")
-                    print(f" ↳ Total Ejecutadas ⚡ : {config.estadisticas_bot['total_ordenes']}")
-                    print(f" ↳ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate")
-                    print(f" ↳ Histórico de la cuenta  : {config.historico_cuenta}")
-                    print(f" ↳ Ultimo cierre           : {config.motivo_cierre_stats}")
+                    print(f" ↳ Operaciones Ganadas  🟢  : {config.estadisticas_bot['ganadas']}")
+                    print(f" ↳ Operaciones Perdidas 🔴  : {config.estadisticas_bot['perdidas']}")
+                    print(f" ↳ Total Ejecutadas ⚡      : {config.estadisticas_bot['total_ordenes']}")
+                    print(f" ↳ Porcentaje de Aciertos🎯 : {win_rate:.1f}% Win Rate")
+                    print(f" ↳ Histórico de la cuenta   : {config.historico_cuenta}")
+                    print(f" ↳ Ultimo cierre            : {config.motivo_cierre_stats}")
                     print("=" * 75)
-                    print(f"🔴 Ultimo error            : {config.error}")
+                    print(f"🔴 Ultimo error             : {config.error}")
                     
             except Exception as error_ejecucion:
                 config.error = traceback.format_exc()
@@ -451,7 +444,7 @@ def robot_grabador_ticks_xtb():
 from matplotlib.animation import FuncAnimation
 
 def loop_render_grafico(frame, fig, ax):
-    """Refresca la GUI de manera segura interactuando directamente con Matplotlib."""
+    """Refresca la GUI de manera segura interactuando directamente con Matplotlib"""
     try:
         df_actual = config.datos_compartidos["df_velas"].copy()
         idx_senal = config.datos_compartidos["indice_senal"]
@@ -488,10 +481,11 @@ def loop_render_grafico(frame, fig, ax):
         pass
 
 def extraer_datos_velas():
-    config.lista_velas_acumuladas = extraer_velas(config.activo_actual)
-    df_historial_total = pd.DataFrame(config.lista_velas_acumuladas)
-    config.datos_compartidos["df_velas"] = df_historial_total
-    df_historial_total.index = pd.date_range(start="2026-01-01 09:30", periods=len(df_historial_total), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
+    config.lista_velas_acumuladas = extraer_velas()
+    config.historico_velas = pd.DataFrame(config.lista_velas_acumuladas)
+    config.datos_compartidos["df_velas"] = config.historico_velas
+    config.historico_velas.index = pd.date_range(start="2026-01-01 09:30", periods=len(config.historico_velas), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
+    config.datos_compartidos["df_velas"] = config.historico_velas
 
 def iniciar_renderizado_grafico_mac():
     # Inicialización de la figura y el eje nativo

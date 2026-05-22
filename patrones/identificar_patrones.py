@@ -72,6 +72,15 @@ def identificar_patrones(total_velas, valor_adx):
             config.datos_compartidos["tipo_senal"] = "VENTA"
             config.datos_compartidos["senal_accion"] = f"🔴 VENTA DETECTADA: {nombre_patron}"
             return f"VENTA_{nombre_patron}"
-        
-    config.datos_compartidos["senal_accion"] = "🔎 MERCADO EN RANGO / NEUTRAL (Buscando patrones)"
-    return "Analizando la acción del precio..."
+    
+    if nombre_patron != "Ninguno":
+        if valor_adx >= config.ADX_TENDENCIA_FUERTE:
+            config.datos_compartidos["senal_accion"] = f"🔴 SE PATRON {nombre_patron} IDENTIFICADO, PERO TENDENCIA NO COMPATIBLE"
+        else:
+            config.datos_compartidos["senal_accion"] = f"🔴 SE PATRON {nombre_patron} IDENTIFICADO, PERO ADX DEBIL"
+    else:
+        config.datos_compartidos["senal_accion"] = "🔎 MERCADO EN RANGO / NEUTRAL (Buscando patrones)"
+
+    config.ultimo_patron = nombre_patron
+
+    return "Analizando la acción del precio"
