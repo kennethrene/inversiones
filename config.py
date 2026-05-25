@@ -9,7 +9,7 @@ RSI_SOBREVENTA = 15.0 # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd
 RSI_SOBREVENTA_MACD = 30.0 # Nivel de sobreventa para compras para validar con macd
 ADX_TENDENCIA_FUERTE = 25.0 # Filtro de fuerza obligatorio para operar
-VOL_ADECUADO_OPERAR = 3000
+VOL_ADECUADO_OPERAR = 0
 
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
 PORCENTAJE_STOP_LOSS = -10.0 # Límite estricto de pérdida permitida (debe ser NEGATIVO)
@@ -44,6 +44,18 @@ datos_compartidos = {
     "trailing_status": "Inactivo"
 }
 
+datos_mapeados = {
+    "Activo": "N/D", 
+    "Tipo": "N/D", 
+    "Volumen": "N/D", 
+    "Valor Contrato": "N/D", 
+    "Precio Actual": "N/D", 
+    "Precio Apertura": "N/D", 
+    "Beneficio %": "N/D", 
+    "Beneficio Neto": "N/D", 
+    "Operacion": "N/D"
+}
+
 # 🟢 CONTADORES DE ESTADÍSTICA EN VIVO
 estadisticas_bot = {
     "ganadas": 0,
@@ -63,26 +75,28 @@ historico_macd = []
 historico_rsi = []
 historico_volumen = []
 promedio_volumen = 0.0
-promedio_volumen_sin_actual = None # Promedio de los volumenes anteriores al actual
+promedio_volumen_sin_actual = 0.0 # Promedio de los volumenes anteriores al actual
 historico_velas = None
 ultimo_patron = "Ninguno"
-valor_rsi = None
-valor_adx = None
-valor_macd = None
-valor_volumen = None
-valor_ema_35 = None
-valor_ema_50 = None
-ultimo_valor_rsi = None
+valor_rsi = 0.0
+valor_adx = 0
+valor_macd = 0
+valor_volumen = 0
+valor_ema_35 = 0
+valor_ema_50 = 0
+ultimo_valor_rsi = 0
 log_operacion = None
 valor_compra = None
 valor_venta = None
 ultimo_valor_compra = None
 ultimo_valor_venta = None
-ultimo_segundo_procesado = None
+ultimo_segundo_procesado = 0
+penultimo_segundo_procesado = 0
+ultimo_valor_volumen = 0
 error = None
 
 movimiento_abrupto = {
-    "US100": 6.0,       # 6 puntos en 1 segundo es una aceleración violenta
+    "US100": 20.0,       # 6 puntos en 1 segundo es una aceleración violenta
     "US30": 15.0,       # 15 puntos en 1 segundo
     "US500": 2.5,       # 2.5 puntos en 1 segundo
     "US2000": 1.2,      # 1.2 puntos en 1 segundo

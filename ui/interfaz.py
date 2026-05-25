@@ -36,14 +36,14 @@ def ui_rsi(parent_text_content, texto_componente, historico, texto_rsi_actual):
         if decimales_rsi:
             config.ultimo_valor_rsi = config.valor_rsi
             config.valor_rsi = float(decimales_rsi[-1])
-            if config.valor_rsi >= config.RSI_SOBRECOMPRA: config.valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
-            elif config.valor_rsi <= config.RSI_SOBREVENTA: config.valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
-            else: config.valor_rsi = f"{config.valor_rsi:.2f}"            
+            if float(config.valor_rsi) >= config.RSI_SOBRECOMPRA: valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
+            elif float(config.valor_rsi) <= config.RSI_SOBREVENTA: valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
+            else: valor_rsi = f"{config.valor_rsi:.2f}"            
 
             return (
                 f" ⚛️  OSCILADOR RSI\n"
                 f"  ───────────────────────────────────\n"
-                f"   Valor actual : {config.valor_rsi}\n"
+                f"   Valor actual : {valor_rsi}\n"
                 f"   Histórico    : {historico}"
             )
 
@@ -68,6 +68,8 @@ def ui_volumen(parent_text_content, texto_componente, texto_volumen_actual):
             return (
                 f" 🔋 VOLUMEN\n"
                 f"  ───────────────────────────────────\n"
+                f"    Actual                   : {config.valor_volumen}\n"
+                f"    Ultimo                   : {config.ultimo_valor_volumen}\n"
                 f"    Histórico                : {config.historico_volumen}\n"
                 f"    Promedio                 : {config.promedio_volumen}\n"
                 f"    Promedio sin el actual   : {config.promedio_volumen_sin_actual}"
@@ -142,25 +144,26 @@ def ui_stop_loss(activo, rendimiento):
             f"   🔴 ACTUAL: {rendimiento:+.2f}%"
         )
 
-def ui_operacion_activa(activo, datos, rendimiento_actual):
+def ui_operacion_activa(activo, rendimiento_actual):
     if activo:
         icono_beneficio = "🟢" if rendimiento_actual >= 0 else "🔴"
 
         return (
             f"📌 [OPERACION]\n"
+            f"  ───────────────────────────────────\n"            
+            f"   Operación          : {config.datos_mapeados["Operacion"]}\n"
+            f"   💱 Instrumento     : {config.datos_mapeados['Activo']} ({config.datos_mapeados['Tipo']})\n"
+            f"   📦 Volumen (Lotes) : {config.datos_mapeados['Volumen']}\n"
+            f"   🚀 Precio Apertura : {config.datos_mapeados['Precio Apertura']}\n"
+            f"   📊 Precio Actual   : {config.datos_mapeados['Precio Actual']}\n"
+            f"   {icono_beneficio} Beneficio Neto  : {config.datos_mapeados['Beneficio Neto']} ({config.datos_mapeados['Beneficio %']})\n\n"
+            f"   Log operación\n"
             f"  ───────────────────────────────────\n"
-            f"   Log operación      : {config.log_operacion}\n"
-            f"   💱 Instrumento     : {datos['Activo']} ({datos['Tipo']})\n"
-            f"   📦 Volumen (Lotes) : {datos['Volumen']}\n"
-            f"   🚀 Precio Apertura : {datos['Precio Apertura']}\n"
-            f"   📊 Precio Actual   : {datos['Precio Actual']}\n"
-            f"   {icono_beneficio} Beneficio Neto  : {datos['Beneficio Neto']} ({datos['Beneficio %']})"
+            f"   {config.log_operacion}"
         )
     else:
         return (
-            f"📌 SIN OPERACIONES ACTIVAS\n"
-            f"  ───────────────────────────────────\n"
-            f"  Log operación : {config.log_operacion}"
+            f"📌 SIN OPERACIONES ACTIVAS"
         )
 
 def ui_estadisticas(motivo_cierre):

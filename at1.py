@@ -8,6 +8,7 @@ import re
 import config
 from indicadores.operaciones import ejecutar_operacion
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general
+from files.tracking import guardar_estadistica, actualizar_ultima_operacion
 
 # 📊 HISTORIAL GLOBAL PARA CONSTRUIR EL GRÁFICO ASCII NATIVO
 historial_precios_recientes = []
@@ -43,40 +44,34 @@ def extraer_datos_operacion(lista_cruda):
 
     filtrados = [str(d).replace('\xa0', ' ').strip() for d in lista_cruda if str(d).strip()]
     
-    datos_mapeados = {
-        "Activo": "N/D", "Tipo": "N/D", "Volumen": "N/D", 
-        "Valor Contrato": "N/D", "Precio Actual": "N/D", 
-        "Precio Apertura": "N/D", "Beneficio %": "N/D", "Beneficio Neto": "N/D"
-    }
-    
+   
     if len(filtrados) >= 2:
-        datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
-        datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
+        config.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
+        config.datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
         
     for i in range(len(filtrados) - 1):
         texto_actual = filtrados[i].lower()
         siguiente_texto = filtrados[i+1]
         
         if "volumen" == texto_actual:
-            datos_mapeados["Volumen"] = siguiente_texto
+            config.datos_mapeados["Volumen"] = siguiente_texto
         elif "valor del contrato" in texto_actual:
-            datos_mapeados["Valor Contrato"] = siguiente_texto
+            config.datos_mapeados["Valor Contrato"] = siguiente_texto
         elif "precio actual" in texto_actual:
-            datos_mapeados["Precio Actual"] = siguiente_texto
+            config.datos_mapeados["Precio Actual"] = siguiente_texto
         elif "precio medio de apertura" in texto_actual:
-            datos_mapeados["Precio Apertura"] = siguiente_texto
+            config.datos_mapeados["Precio Apertura"] = siguiente_texto
         elif "beneficio neto %" in texto_actual:
-            datos_mapeados["Beneficio %"] = siguiente_texto
+            config.datos_mapeados["Beneficio %"] = siguiente_texto
         elif "beneficio neto" == texto_actual:
-            datos_mapeados["Beneficio Neto"] = siguiente_texto
+            config.datos_mapeados["Beneficio Neto"] = siguiente_texto
             
     # BÚSQUEDA EXHAUSTIVA DE RESPALDO SI EL MAPEO INDEPENDIENTE SE CORRE
-    if datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(datos_mapeados["Beneficio %"]):
+    if config.datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(config.datos_mapeados["Beneficio %"]):
         for elemento in filtrados:
             if "%" in elemento and ("-" in elemento or re.search(r'\d', elemento)):
-                datos_mapeados["Beneficio %"] = elemento
+                config.datos_mapeados["Beneficio %"] = elemento
                 break
-    return datos_mapeados
 
 def inicializar():
     global bloqueo_orden_vela, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
@@ -182,7 +177,7 @@ def obtener_datos_compra_venta(segundo_actual):
     if activo_detectado != config.activo_actual:
         config.activo_actual = activo_detectado
         config.promedio_volumen = 0
-        config.promedio_volumen_sin_actual = 0
+        config.promedio_volumen_sin_actual = 0.0
         config.historico_macd = []
         config.historico_rsi = []
 
@@ -204,10 +199,15 @@ def bot_scalping():
                 if minuto_anterior == "": minuto_anterior = minuto_actual
 
                 segundo_actual = time.strftime('%H:%M:%S')
+                segundo_actual_int = time.strftime('%S')
                 obtener_datos_compra_venta(segundo_actual)
 
                 if segundo_actual != config.ultimo_segundo_procesado:
                     config.ultimo_segundo_procesado = segundo_actual
+                
+                if int(segundo_actual_int) - 2 >= int(config.penultimo_segundo_procesado):
+                    config.ultimo_valor_volumen = config.valor_volumen
+                    config.penultimo_segundo_procesado = segundo_actual_int
 
                 config.valor_macd = "No detectado"
                 config.valor_rsi = None
@@ -278,11 +278,11 @@ def bot_scalping():
                         trailing_activado = False
                     
                     # Llamamos a la extracción con la matriz limpia
-                    datos = extraer_datos_operacion(operaciones_detalles)
+                    extraer_datos_operacion(operaciones_detalles)
                     
                     # --- FILTRADO DE SEGURIDAD EXTREMA DEL % ---
                     try:
-                        texto_porcentaje = str(datos["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
+                        texto_porcentaje = str(config.datos_mapeados["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
                         match_pct = re.search(r'([-+]?\d+\.\d+|-?\d+)', texto_porcentaje)
                         rendimiento_actual = float(match_pct.group(1)) if match_pct else 0.0
                     except:
@@ -314,16 +314,25 @@ def bot_scalping():
                     else:
                         texto_trailing = ui_trailing(True, False, rendimiento_actual, None)
 
-                    texto_operacion_activa = ui_operacion_activa(True, datos, rendimiento_actual)
-
-                    beneficio_neto =  float(datos['Beneficio Neto'])
+                    texto_operacion_activa = ui_operacion_activa(True, rendimiento_actual)
+                    beneficio_neto =  float(config.datos_mapeados['Beneficio Neto'])
 
                     if beneficio_neto >= config.TAKE_PROFIT_MONETARIO:
                         ejecutar_cierre = True
                         operacion_ganada = True
                         motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
+                    
+                    if beneficio_neto > 0 and float(config.valor_rsi) < config.RSI_SOBREVENTA_MACD and config.datos_mapeados["Operacion"] == "Venta":
+                        ejecutar_cierre = True
+                        operacion_ganada = True
+                        motivo_cierre_stats = f"Venta alcanzó el RSI de sobreventa - Se espera retroceso (+${beneficio_neto:.2f})"
+                    
+                    if beneficio_neto > 0 and float(config.valor_rsi) > config.RSI_SOBRECOMPRA_MACD and config.datos_mapeados["Operacion"] == "Compra":
+                        ejecutar_cierre = True
+                        operacion_ganada = True
+                        motivo_cierre_stats = f"Venta alcanzó el RSI de sobrecompra - Se espera retroceso (+${beneficio_neto:.2f})"
                 else:
-                    texto_operacion_activa = ui_operacion_activa(False, None, None)
+                    texto_operacion_activa = ui_operacion_activa(False, None)
                     hora_apertura_orden = None
 
                 if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
@@ -352,7 +361,9 @@ def bot_scalping():
                         config.historico_rsi.pop(0)
 
                     try:
-                        config.historico_volumen.append(config.valor_volumen)
+                        config.historico_volumen.append(config.ultimo_valor_volumen)
+                        config.penultimo_segundo_procesado = 0
+                        config.ultimo_valor_volumen = 0
                         if len(config.historico_volumen) > 6:
                             config.historico_volumen.pop(0)
                             config.promedio_volumen = sum(config.historico_volumen) / 6
@@ -361,7 +372,7 @@ def bot_scalping():
                             config.promedio_volumen = sum(config.historico_volumen) / len(config.historico_volumen)
                             config.promedio_volumen_sin_actual = sum(config.historico_volumen[:-1]) / len(config.historico_volumen[:-1]) if len(config.historico_volumen) > 1 else 0
                     except (ValueError, TypeError):
-                        config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.valor_volumen}"
+                        config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.ultimo_valor_volumen}"
 
                 # Ejecución automática de operaciones bajo confluencia estricta
                 if not bloqueo_orden_vela and not operacion_activa:
@@ -371,18 +382,22 @@ def bot_scalping():
 
                     operacion = ejecutar_operacion()
     
-                    if boton_comprar and operacion == "Comprar":
+                    if boton_comprar and operacion == "Comprar":                            
                             boton_comprar.click()
                             os.system('say "Comprando" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
-                            hora_apertura_orden = time.time()
-                    elif boton_vender and operacion == "Vender":
+                            hora_apertura_orden = time.time()                            
+                            config.datos_mapeados['Operacion'] = "Compra"
+                            guardar_estadistica("Compra")
+                    elif boton_vender and operacion == "Vender":                            
                             boton_vender.click()
                             os.system('say "Vendiendo" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
-                            hora_apertura_orden = time.time()
+                            hora_apertura_orden = time.time()                            
+                            config.datos_mapeados['Operacion'] = "Venta"
+                            guardar_estadistica("Venta")
 
                 # ===========================================================================
                 # MÓDULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
@@ -403,12 +418,13 @@ def bot_scalping():
 
                         # Sincronizador de estadísticas con lectura de resultados reales
                         if beneficio_neto > 0:
+                            actualizar_ultima_operacion(config.datos_mapeados, "Si", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(True)
                         else:
+                            actualizar_ultima_operacion(config.datos_mapeados, "No", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(False)
 
                         time.sleep(5)
-                        segundo_ultimo_valor = 0
                     except Exception as error_ejecucion:
                         config.error = traceback.format_exc()
 
@@ -439,7 +455,7 @@ def bot_scalping():
                 config.error = traceback.format_exc()
                 time.sleep(0.1)
                 
-            time.sleep(0.1)
+            #time.sleep(0.1)
             
     except Exception as e:
         config.error = traceback.format_exc()
