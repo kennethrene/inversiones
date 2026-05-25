@@ -9,11 +9,12 @@ RSI_SOBREVENTA = 15.0 # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd
 RSI_SOBREVENTA_MACD = 30.0 # Nivel de sobreventa para compras para validar con macd
 ADX_TENDENCIA_FUERTE = 25.0 # Filtro de fuerza obligatorio para operar
+VOL_ADECUADO_OPERAR = 3000
 
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
 PORCENTAJE_STOP_LOSS = -10.0 # Límite estricto de pérdida permitida (debe ser NEGATIVO)
-PORCENTAJE_ACTIVACION_TRAILING = 5.0 # % mínimo de ganancia para activar la persecución inteligente
-DISTANCIA_TRAILING_MAXIMA = 2.5 # % máximo que permites que el precio retroceda desde su pico
+PORCENTAJE_ACTIVACION_TRAILING = 10.0 # % mínimo de ganancia para activar la persecución inteligente
+DISTANCIA_TRAILING_MAXIMA = 5.0 # % máximo que permites que el precio retroceda desde su pico
 TAKE_PROFIT_MONETARIO = 5.0  # 🔥 Modifica este valor por la ganancia deseada
 PORCENTAJE_STOP_LOSS  = -10.0  # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
 
@@ -52,6 +53,8 @@ estadisticas_bot = {
 }
 
 activo_actual = None
+valor_lote = None
+spread = None
 motivo_cierre_stats = None
 hora_apertura_orden = None
 lista_velas_acumuladas = []
@@ -66,5 +69,32 @@ ultimo_patron = "Ninguno"
 valor_rsi = None
 valor_adx = None
 valor_macd = None
+valor_volumen = None
+valor_ema_35 = None
+valor_ema_50 = None
+ultimo_valor_rsi = None
 log_operacion = None
+valor_compra = None
+valor_venta = None
+ultimo_valor_compra = None
+ultimo_valor_venta = None
+ultimo_segundo_procesado = None
 error = None
+
+movimiento_abrupto = {
+    "US100": 6.0,       # 6 puntos en 1 segundo es una aceleración violenta
+    "US30": 15.0,       # 15 puntos en 1 segundo
+    "US500": 2.5,       # 2.5 puntos en 1 segundo
+    "US2000": 1.2,      # 1.2 puntos en 1 segundo
+    "DE40": 5.0,        # 5 puntos en 1 segundo
+    "FRA40": 3.0,       # 3 puntos en 1 segundo
+    "UK100": 3.5,       # 3.5 puntos en 1 segundo
+    "HK.CASH": 10.0,    # 10 puntos en 1 segundo
+    "GOLD": 2.0,        # 2 dólares de salto en 1 segundo
+    "COCOA": 25.0,      # 25 dólares en 1 segundo debido a su alta volatilidad
+    "COFFEE": 1.5,      # 1.5 centavos en 1 segundo
+    "OIL": 0.15,        # 0.15 dólares en 1 segundo
+    "USDJPY": 0.08,     # 8 pips de salto en 1 segundo
+    "JP225": 25.0,      # 25 yenes en 1 segundo
+    "EURUSD": 0.0002    # 2 pips de salto en 1 segundo
+}

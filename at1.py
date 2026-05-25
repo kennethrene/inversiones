@@ -7,7 +7,7 @@ import os
 import re
 import config
 from indicadores.operaciones import ejecutar_operacion
-from ui.interfaz import ui_adx, ui_macd, ui_rsi
+from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general
 
 # 📊 HISTORIAL GLOBAL PARA CONSTRUIR EL GRÁFICO ASCII NATIVO
 historial_precios_recientes = []
@@ -22,14 +22,8 @@ minuto_ultima_orden = ""
 motivo_cierre_stats = "N/D"
 driver = None
 comando_limpiar = None
-precio_sell_visible = "0.00"
-precio_buy_visible = "0.00"
-lote_visible = "No detectado"
-config.valor_macd = "No detectado"
-config.valor_rsi = None
-config.valor_adx = None
-boton_compra_real = None
-boton_venta_real = None
+boton_comprar = None
+boton_vender = None
 
 def actualizar_estadisticas_cierre(ganada=False):
     """Registra una operación ejecutada y actualiza si fue ganada o perdida."""
@@ -38,7 +32,7 @@ def actualizar_estadisticas_cierre(ganada=False):
     if ganada: config.estadisticas_bot["ganadas"] += 1
     else: config.estadisticas_bot["perdidas"] += 1
 
-def extraer_datos(lista_cruda):
+def extraer_datos_operacion(lista_cruda):
     """
     Procesa la lista plana de strings reales de xStation eliminando espacios
     invisibles y aislando las cadenas puras para cada columna del bot.
@@ -55,7 +49,6 @@ def extraer_datos(lista_cruda):
         "Precio Apertura": "N/D", "Beneficio %": "N/D", "Beneficio Neto": "N/D"
     }
     
-    # CORRECCIÓN EN EL INDEXADO: Extraemos el valor del string puro por posición exacta
     if len(filtrados) >= 2:
         datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
         datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
@@ -110,43 +103,94 @@ def inicializar():
     print("=" * 75)
     time.sleep(1)
 
-def capturar_componentes():
-    global precio_sell_visible, precio_buy_visible, lote_visible, boton_compra_real, boton_venta_real
+def obtener_datos_operaciones():
+    return """
+        let botonesValidos = [];
+        let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
+        
+        todosLosBotones.forEach(btn => {
+            if (btn.offsetWidth > 0 || btn.offsetHeight > 0) { botonesValidos.push(btn); }
+        });
+        
+        if (botonesValidos.length === 0) {
+            let elementosGlobales = document.querySelectorAll("*");
+            elementosGlobales.forEach(el => {
+                if (el.shadowRoot) {
+                    let btnShadow = el.shadowRoot.querySelector("button[data-testid='close-button']");
+                    if (btnShadow && (btnShadow.offsetWidth > 0 || btnShadow.offsetHeight > 0)) {
+                        botonesValidos.push(btnShadow);
+                    }
+                }
+            });
+        }
+        
+        let datosOperaciones = [];
+        botonesValidos.forEach(btn => {
+            let fila = btn.closest("tr") || btn.closest("[role='row']") || btn.parentElement.parentElement;
+            if (fila) {
+                let textos = fila.innerText.split('\\n').map(t => t.trim()).filter(t => t.length > 0);
+                datosOperaciones.push(textos);
+            }
+        });
+        
+        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; }
+        return { "total": botonesValidos.length, "detalles": datosOperaciones };
+        """
 
-    #Capturar componentes comerciales de la pestaña visible
-    todos_los_sell = driver.find_elements(By.CSS_SELECTOR, "#sellButton, [id='sellButton']")
-    todos_los_buy = driver.find_elements(By.CSS_SELECTOR, "#buyButton, [id='buyButton']")
-    todos_los_lotes = driver.find_elements(By.CSS_SELECTOR, "span.ui-spinner-amount-value, input[name='stepperInput'], [id='volumeInput']")
+# ===========================================================================
+# ESCANEO CON PERFORADOR SHADOW DOM Y GESTIÓN DE MATRICES
+# ===========================================================================
+def obtener_datos_compra_venta(segundo_actual):
+    global boton_comprar, boton_vender
+
+    # Capturar los datos de compra, venta y lote (proporcion a comprar) de la pestaña actual
+    botones_vender = driver.find_elements(By.CSS_SELECTOR, "#sellButton, [id='sellButton']")
+    botones_comprar = driver.find_elements(By.CSS_SELECTOR, "#buyButton, [id='buyButton']")
+    botones_lote = driver.find_elements(By.CSS_SELECTOR, "span.ui-spinner-amount-value, input[name='stepperInput'], [id='volumeInput']")
+    activos = driver.find_elements(By.CLASS_NAME, "chart-panel-symbol-title")
     
-    precio_sell_visible = "0.00"
-    precio_buy_visible = "0.00"
-    lote_visible = "No detectado"
-    boton_compra_real = None
-    boton_venta_real = None
+    boton_comprar = None
+    boton_vender = None
 
-    for boton in todos_los_sell:
+    for boton in botones_vender:
         if boton.is_displayed() and boton.is_enabled():
-            precio_sell_visible = boton.get_attribute("textContent").strip()
-            boton_venta_real = boton
+            if (segundo_actual != config.ultimo_segundo_procesado):
+                config.ultimo_valor_venta = config.valor_venta
+            config.valor_venta = boton.get_attribute("textContent").strip()
+            boton_vender = boton
             break
-    for boton in todos_los_buy:
+    for boton in botones_comprar:
         if boton.is_displayed() and boton.is_enabled():
-            precio_buy_visible = boton.get_attribute("textContent").strip()
-            boton_compra_real = boton
+            if (segundo_actual != config.ultimo_segundo_procesado):
+                config.ultimo_valor_compra = config.valor_compra
+            config.valor_compra = boton.get_attribute("textContent").strip()
+            boton_comprar = boton
             break
-    for vol in todos_los_lotes:
+    for vol in botones_lote:
         if vol.is_displayed():
             texto_vol = vol.get_attribute("value") if vol.tag_name == "input" else vol.get_attribute("textContent").strip()
             if texto_vol:
-                lote_visible = texto_vol.replace("USD", "").strip()
+                config.valor_lote = texto_vol.replace("USD", "").strip()
                 break
+    for activo in activos:
+        if activo.is_displayed():
+            texto_bruto = activo.get_attribute("textContent")
+            if texto_bruto:
+                activo_detectado = texto_bruto.replace("CFD", "").strip()
+                break
+    
+    if activo_detectado != config.activo_actual:
+        config.activo_actual = activo_detectado
+        config.promedio_volumen = 0
+        config.promedio_volumen_sin_actual = 0
+        config.historico_macd = []
+        config.historico_rsi = []
 
 def bot_scalping():
     global estadisticas_bot, hora_apertura_orden, operacion_ganada
     global maximo_rendimiento_alcanzado, trailing_activado, tiempo_ultimo_cierre
     global bloqueo_orden_vela, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
-    global precio_sell_visible, precio_buy_visible, lote_visible
-    global boton_compra_real, boton_venta_real
+    global boton_comprar, boton_vender
     
     try:
         inicializar()
@@ -159,7 +203,11 @@ def bot_scalping():
                 minuto_actual = time.strftime('%M')                
                 if minuto_anterior == "": minuto_anterior = minuto_actual
 
-                capturar_componentes()
+                segundo_actual = time.strftime('%H:%M:%S')
+                obtener_datos_compra_venta(segundo_actual)
+
+                if segundo_actual != config.ultimo_segundo_procesado:
+                    config.ultimo_segundo_procesado = segundo_actual
 
                 config.valor_macd = "No detectado"
                 config.valor_rsi = None
@@ -167,6 +215,8 @@ def bot_scalping():
                 texto_macd = ""
                 texto_rsi = ""
                 texto_adx = ""
+                texto_volumen = ""
+                texto_ema = ""
 
                 # Escaneo de los indicadores técnicos
                 xpath_indicadores = "//*[contains(@class, 'indicator-value-label')]"
@@ -184,6 +234,8 @@ def bot_scalping():
                             texto_macd = ui_macd(parent_text_content, texto_componente, config.historico_macd, texto_macd)
                             texto_rsi = ui_rsi(parent_text_content, texto_componente, config.historico_rsi, texto_rsi)
                             texto_adx = ui_adx(parent_text_content, texto_componente, texto_adx)
+                            texto_volumen = ui_volumen(parent_text_content, texto_componente, texto_volumen)
+                            texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
                             texto_separador = "-" * 75
                             texto_final = "=" * 75
 
@@ -194,6 +246,10 @@ def bot_scalping():
                                 f"{texto_rsi}\n"
                                 f"{texto_separador}\n"
                                 f"{texto_adx}\n"
+                                f"{texto_separador}\n"
+                                f"{texto_volumen}\n"
+                                f"{texto_separador}\n"
+                                f"{texto_ema}\n"
                                 f"{texto_final}"
                             )
                     except: continue
@@ -201,41 +257,7 @@ def bot_scalping():
                 if minuto_ultima_orden != time.strftime('%M'):
                     bloqueo_orden_vela = False
 
-                # ===========================================================================
-                # 3 y 4. ESCANEO CON PERFORADOR SHADOW DOM Y GESTIÓN DE MATRICES
-                # ===========================================================================
-                js_script_shadow = """
-                let botonesValidos = [];
-                let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
-                
-                todosLosBotones.forEach(btn => {
-                    if (btn.offsetWidth > 0 || btn.offsetHeight > 0) { botonesValidos.push(btn); }
-                });
-                
-                if (botonesValidos.length === 0) {
-                    let elementosGlobales = document.querySelectorAll("*");
-                    elementosGlobales.forEach(el => {
-                        if (el.shadowRoot) {
-                            let btnShadow = el.shadowRoot.querySelector("button[data-testid='close-button']");
-                            if (btnShadow && (btnShadow.offsetWidth > 0 || btnShadow.offsetHeight > 0)) {
-                                botonesValidos.push(btnShadow);
-                            }
-                        }
-                    });
-                }
-                
-                let datosOperaciones = [];
-                botonesValidos.forEach(btn => {
-                    let fila = btn.closest("tr") || btn.closest("[role='row']") || btn.parentElement.parentElement;
-                    if (fila) {
-                        let textos = fila.innerText.split('\\n').map(t => t.trim()).filter(t => t.length > 0);
-                        datosOperaciones.push(textos);
-                    }
-                });
-                
-                if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; }
-                return { "total": botonesValidos.length, "detalles": datosOperaciones };
-                """
+                js_script_shadow = obtener_datos_operaciones()
                 
                 resultado_shadow = driver.execute_script(js_script_shadow)
                 total_posiciones = resultado_shadow["total"]
@@ -244,17 +266,10 @@ def bot_scalping():
                 operacion_activa = total_posiciones > 0
                 ejecutar_cierre = False
                 beneficio_neto = None
-                reporte_trailing_consola = (
-                            f" 🧭 TRAILING STOP\n"
-                            f"  ───────────────────────────────────\n"
-                            f"    Inactivo (Sin operaciones en ejecución)"
-                        )
-                reporte_stop_loss_consola = (
-                        f" 🧭 STOP LOSS ACTUAL\n"
-                        f"  ───────────────────────────────────\n"
-                        f"   🔴 FIJADO: --\n"
-                        f"   🔴 ACTUAL: --"
-                    )
+                
+                texto_trailing = ui_trailing(False, False, None, None)
+
+                texto_stop_loss = ui_stop_loss(False, None)
 
                 if operacion_activa and len(operaciones_detalles) > 0:
                     if hora_apertura_orden is None:
@@ -263,23 +278,18 @@ def bot_scalping():
                         trailing_activado = False
                     
                     # Llamamos a la extracción con la matriz limpia
-                    om = extraer_datos(operaciones_detalles)
+                    datos = extraer_datos_operacion(operaciones_detalles)
                     
                     # --- FILTRADO DE SEGURIDAD EXTREMA DEL % ---
                     try:
-                        texto_porcentaje = str(om["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
+                        texto_porcentaje = str(datos["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
                         match_pct = re.search(r'([-+]?\d+\.\d+|-?\d+)', texto_porcentaje)
                         rendimiento_actual = float(match_pct.group(1)) if match_pct else 0.0
                     except:
                         rendimiento_actual = 0.0
                     
                     # ─── LÓGICA DE CONTROL POR % NATIVO: STOP LOSS DIRECTO ───
-                    reporte_stop_loss_consola = (
-                        f" 🧭 STOP LOSS ACTUAL\n"
-                        f"  ───────────────────────────────────\n"
-                        f"   🔴 FIJADO: {config.PORCENTAJE_STOP_LOSS:.1f}%\n"
-                        f"   🔴 ACTUAL: {rendimiento_actual:+.2f}%"
-                    )
+                    texto_stop_loss = ui_stop_loss(True, rendimiento_actual)
                     
                     if rendimiento_actual <= config.PORCENTAJE_STOP_LOSS:
                         motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
@@ -295,55 +305,25 @@ def bot_scalping():
                         
                     if trailing_activado:                        
                         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
-                        reporte_trailing_consola = (
-                            f" 🧭 TRAILING STOP\n"
-                            f"  ───────────────────────────────────\n"
-                            f"   🔥 Activado\n"
-                            f"   🔥 Máximo rendimiento alcanzado : +{maximo_rendimiento_alcanzado:.2f}%\n"
-                            f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
-                            f"   🔥 % Activación de trailing     : {config.PORCENTAJE_ACTIVACION_TRAILING}%\n"
-                            f"   🔥 % Trailing stop              : {config.DISTANCIA_TRAILING_MAXIMA}%"
-                        )
+                        texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
                         
                         if caida_desde_pico >= config.DISTANCIA_TRAILING_MAXIMA:
                             motivo_cierre_stats = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
                             ejecutar_cierre = True
                             operacion_ganada = True
                     else:
-                        reporte_trailing_consola = (
-                            f" 🧭 TRAILING STOP\n"
-                            f"  ───────────────────────────────────\n"
-                            f"   💤 Inactivo\n"
-                            f"   % Actual    : {rendimiento_actual:+.2f}%\n"
-                            f"   % Requerido : {config.PORCENTAJE_ACTIVACION_TRAILING}%"
-                        )
+                        texto_trailing = ui_trailing(True, False, rendimiento_actual, None)
 
-                    icono_beneficio = "🟢" if rendimiento_actual >= 0 else "🔴"
-                    
-                    lucro_flotante_visible = (
-                        f"📌 [OPERACION]\n"
-                        f"  ───────────────────────────────────\n"
-                        f"   Log operación      : {config.log_operacion}\n"
-                        f"   💱 Instrumento     : {om['Activo']} ({om['Tipo']})\n"
-                        f"   📦 Volumen (Lotes) :  {om['Volumen']}\n"
-                        f"   💼 Valor Contrato  :   {om['Valor Contrato']}\n"
-                        f"   🚀 Precio Apertura :  {om['Precio Apertura']}\n"
-                        f"   📊 Precio Actual   :    {om['Precio Actual']}\n"
-                        f"   {icono_beneficio} Beneficio Neto:   {om['Beneficio Neto']} ({om['Beneficio %']})"
-                    )
+                    texto_operacion_activa = ui_operacion_activa(True, datos, rendimiento_actual)
 
-                    beneficio_neto =  float(om['Beneficio Neto'])
+                    beneficio_neto =  float(datos['Beneficio Neto'])
 
                     if beneficio_neto >= config.TAKE_PROFIT_MONETARIO:
                         ejecutar_cierre = True
                         operacion_ganada = True
                         motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
                 else:
-                    lucro_flotante_visible = (
-                        f"📌 SIN OPERACIONES ACTIVAS\n"
-                        f"  ───────────────────────────────────\n"
-                        f"  Log operación : {config.log_operacion}"
-                    )
+                    texto_operacion_activa = ui_operacion_activa(False, None, None)
                     hora_apertura_orden = None
 
                 if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
@@ -352,11 +332,12 @@ def bot_scalping():
                     
                     minuto_anterior = minuto_actual
 
+                    # Adicionar el valor de los indicadores
                     try:
                         valor_numerico = float(config.valor_macd)
                         config.historico_macd.append(valor_numerico)
                     except (ValueError, TypeError):
-                        config.error = "⚠️ No se pudo guardar: el valor del MACD no es numérico."
+                        config.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {config.valor_macd}"
 
                     if len(config.historico_macd) > 2:
                         config.historico_macd.pop(0)
@@ -365,12 +346,24 @@ def bot_scalping():
                         valor_numerico = float(config.valor_rsi)
                         config.historico_rsi.append(valor_numerico)
                     except (ValueError, TypeError):
-                        config.error = "⚠️ No se pudo guardar: el valor del RSI no es numérico."
+                        config.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {config.valor_rsi}"
 
                     if len(config.historico_rsi) > 2:
                         config.historico_rsi.pop(0)
 
-                # 5. Ejecución automática de operaciones bajo confluencia estricta
+                    try:
+                        config.historico_volumen.append(config.valor_volumen)
+                        if len(config.historico_volumen) > 6:
+                            config.historico_volumen.pop(0)
+                            config.promedio_volumen = sum(config.historico_volumen) / 6
+                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1]) / 5
+                        elif len(config.historico_volumen) > 0:
+                            config.promedio_volumen = sum(config.historico_volumen) / len(config.historico_volumen)
+                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[:-1]) / len(config.historico_volumen[:-1]) if len(config.historico_volumen) > 1 else 0
+                    except (ValueError, TypeError):
+                        config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.valor_volumen}"
+
+                # Ejecución automática de operaciones bajo confluencia estricta
                 if not bloqueo_orden_vela and not operacion_activa:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
                     if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
@@ -378,21 +371,21 @@ def bot_scalping():
 
                     operacion = ejecutar_operacion()
     
-                    if boton_compra_real and operacion == "Comprar":
-                            boton_compra_real.click()
+                    if boton_comprar and operacion == "Comprar":
+                            boton_comprar.click()
                             os.system('say "Comprando" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()
-                    elif boton_venta_real and operacion == "Vender":
-                            boton_venta_real.click()
+                    elif boton_vender and operacion == "Vender":
+                            boton_vender.click()
                             os.system('say "Vendiendo" &')
                             bloqueo_orden_vela = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()
 
                 # ===========================================================================
-                # 6. MÓDULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
+                # MÓDULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
                 # ===========================================================================
                 if ejecutar_cierre and operacion_activa:
                     try:
@@ -415,40 +408,32 @@ def bot_scalping():
                             actualizar_estadisticas_cierre(False)
 
                         time.sleep(5)
+                        segundo_ultimo_valor = 0
                     except Exception as error_ejecucion:
                         config.error = traceback.format_exc()
 
-                # 7. CÁLCULO EXCLUSIVO DEL WIN RATE
-                win_rate = (config.estadisticas_bot["ganadas"] / config.estadisticas_bot["total_ordenes"] * 100) if config.estadisticas_bot["total_ordenes"] > 0 else 0.0
-
-                # 8. IMPRESIÓN ACTUALIZADA EN CONSOLA
+                # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
                 os.system(comando_limpiar)
                 print("=" * 75)
                 print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
-                print(f" Servidor activo: {time.strftime('%H:%M:%S')} | Lote: {lote_visible}")
+                print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
                 print("=" * 75)
-                print(f" 🔴 PRECIO ASK (SELL) : {precio_sell_visible}")
-                print(f" 🟢 PRECIO BID (BUY)  : {precio_buy_visible}")
+                print(f"{ui_general()}")
                 print(f"{texto_indicadores}")
-                print(f"{lucro_flotante_visible}")
+                print(f"{texto_operacion_activa}")
                 print("-" * 75)
-                print(f"{reporte_trailing_consola}")
+                print(f"{texto_trailing}")
                 print("-" * 75)
-                print(f"{reporte_stop_loss_consola}")
+                print(f"{texto_stop_loss}")
                 print("-" * 75)
                 print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                 print("=" * 75)
-                print(" 📊 CUADRO DE ESTADÍSTICAS Y MÉTRICAS DE EFECTIVIDAD (HOY):")
-                print(f"    └ Operaciones Ganadas  🟢 : {config.estadisticas_bot['ganadas']}")
-                print(f"    └ Operaciones Perdidas 🔴 : {config.estadisticas_bot['perdidas']}")
-                print(f"    └ Total Ejecutadas     ⚡ : {config.estadisticas_bot['total_ordenes']}")
-                print(f"    └ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate")
-                print(f"    └ Histórico de la cuenta  : {config.historico_cuenta}")
-                print(f"    └ Ultimo cierre           : {motivo_cierre_stats}")
+                print(f"{ui_estadisticas(motivo_cierre_stats)}")
                 print("=" * 75)
                 print(f" 🔴 Ultimo error              : {config.error}")
+                print("=" * 75)
                         
             except Exception as e_bucle:
                 config.error = traceback.format_exc()
@@ -463,4 +448,4 @@ if __name__ == "__main__":
     try:
         bot_scalping()
     except KeyboardInterrupt:
-        print("\n\n[!] Sistema apagado de forma segura.")
+        print("\n\nSistema apagado de forma segura")
