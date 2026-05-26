@@ -1,0 +1,137 @@
+import re
+import pandas as pd
+from selenium.webdriver.common.by import By
+from extraction.candles import extraer_velas
+import config
+
+# ===========================================================================
+# EXTRACCIÓN DE DATOS FILTRADOS POR COLUMNA DESDE EL DOM
+# ===========================================================================
+def extraer_datos_operacion(lista_cruda):
+    """
+    Procesa la lista plana de strings reales de xStation eliminando espacios
+    invisibles y aislando las cadenas puras para cada columna del bot.
+    """
+    # Si por desajuste del bucle principal pasara la matriz de detalles completa, extraemos la primera fila
+    if len(lista_cruda) > 0 and isinstance(lista_cruda[0], list):
+        lista_cruda = lista_cruda[0]
+
+    filtrados = [str(d).replace('\xa0', ' ').strip() for d in lista_cruda if str(d).strip()]
+   
+    if len(filtrados) >= 2:
+        config.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
+        config.datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
+        
+    for i in range(len(filtrados) - 1):
+        texto_actual = filtrados[i].lower()
+        siguiente_texto = filtrados[i+1]
+        
+        if "volumen" == texto_actual:
+            config.datos_mapeados["Volumen"] = siguiente_texto
+        elif "valor del contrato" in texto_actual:
+            config.datos_mapeados["Valor Contrato"] = siguiente_texto
+        elif "precio actual" in texto_actual:
+            config.datos_mapeados["Precio Actual"] = siguiente_texto
+        elif "precio medio de apertura" in texto_actual:
+            config.datos_mapeados["Precio Apertura"] = siguiente_texto
+        elif "beneficio neto %" in texto_actual:
+            config.datos_mapeados["Beneficio %"] = siguiente_texto
+        elif "beneficio neto" == texto_actual:
+            config.datos_mapeados["Beneficio Neto"] = siguiente_texto
+            
+    # BÚSQUEDA EXHAUSTIVA DE RESPALDO SI EL MAPEO INDEPENDIENTE SE CORRE
+    if config.datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(config.datos_mapeados["Beneficio %"]):
+        for elemento in filtrados:
+            if "%" in elemento and ("-" in elemento or re.search(r'\d', elemento)):
+                config.datos_mapeados["Beneficio %"] = elemento
+                break
+
+
+def obtener_datos_operaciones():
+    return """
+        let botonesValidos = [];
+        let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
+        
+        todosLosBotones.forEach(btn => {
+            if (btn.offsetWidth > 0 || btn.offsetHeight > 0) { botonesValidos.push(btn); }
+        });
+        
+        if (botonesValidos.length === 0) {
+            let elementosGlobales = document.querySelectorAll("*");
+            elementosGlobales.forEach(el => {
+                if (el.shadowRoot) {
+                    let btnShadow = el.shadowRoot.querySelector("button[data-testid='close-button']");
+                    if (btnShadow && (btnShadow.offsetWidth > 0 || btnShadow.offsetHeight > 0)) {
+                        botonesValidos.push(btnShadow);
+                    }
+                }
+            });
+        }
+        
+        let datosOperaciones = [];
+        botonesValidos.forEach(btn => {
+            let fila = btn.closest("tr") || btn.closest("[role='row']") || btn.parentElement.parentElement;
+            if (fila) {
+                let textos = fila.innerText.split('\\n').map(t => t.trim()).filter(t => t.length > 0);
+                datosOperaciones.push(textos);
+            }
+        });
+        
+        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; }
+        return { "total": botonesValidos.length, "detalles": datosOperaciones };
+        """
+
+# ===========================================================================
+# ESCANEO CON PERFORADOR SHADOW DOM Y GESTIÓN DE MATRICES
+# ===========================================================================
+def obtener_datos_compra_venta(segundo_actual, con_grafico, driver):
+    # Capturar los datos de compra, venta y lote (proporcion a comprar) de la pestaña actual
+    botones_vender = driver.find_elements(By.CSS_SELECTOR, "#sellButton, [id='sellButton']")
+    botones_comprar = driver.find_elements(By.CSS_SELECTOR, "#buyButton, [id='buyButton']")
+    botones_lote = driver.find_elements(By.CSS_SELECTOR, "span.ui-spinner-amount-value, input[name='stepperInput'], [id='volumeInput']")
+    activos = driver.find_elements(By.CLASS_NAME, "chart-panel-symbol-title")
+    activo_detectado = None
+    
+    for boton in botones_vender:
+        if boton.is_displayed() and boton.is_enabled():
+            if (segundo_actual != config.ultimo_segundo_procesado):
+                config.ultimo_valor_venta = config.valor_venta
+            config.valor_venta = boton.get_attribute("textContent").strip()
+            config.boton_vender = boton
+            break
+    for boton in botones_comprar:
+        if boton.is_displayed() and boton.is_enabled():
+            if (segundo_actual != config.ultimo_segundo_procesado):
+                config.ultimo_valor_compra = config.valor_compra
+            config.valor_compra = boton.get_attribute("textContent").strip()
+            config.boton_comprar = boton
+            break
+    for vol in botones_lote:
+        if vol.is_displayed():
+            texto_vol = vol.get_attribute("value") if vol.tag_name == "input" else vol.get_attribute("textContent").strip()
+            if texto_vol:
+                config.valor_lote = texto_vol.replace("USD", "").strip()
+                break
+    for activo in activos:
+        if activo.is_displayed():
+            texto_bruto = activo.get_attribute("textContent")
+            if texto_bruto:
+                activo_detectado = texto_bruto.replace("CFD", "").strip()
+                break
+    
+    if activo_detectado != config.activo_actual:
+        config.activo_actual = activo_detectado
+        config.promedio_volumen = 0
+        config.promedio_volumen_sin_actual = 0.0
+        config.historico_macd = []
+        config.historico_rsi = []
+
+        if con_grafico:
+            extraer_datos_velas()
+
+def extraer_datos_velas():
+    config.lista_velas_acumuladas = extraer_velas()
+    config.historico_velas = pd.DataFrame(config.lista_velas_acumuladas)
+    config.datos_graficos["datos_velas"] = config.historico_velas
+    config.historico_velas.index = pd.date_range(start="2026-01-01 09:30", periods=len(config.historico_velas), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
+    config.datos_graficos["datos_velas"] = config.historico_velas

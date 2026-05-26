@@ -24,29 +24,119 @@ def analizar_patrones():
         velas_ok_env_baj = not es_vela3_verde and es_vela2_verde
         velas_cierre_env_baj = identificar_patrones.vela3_valor_cerro < identificar_patrones.vela2_valor_abrio
 
-        volumen_velas_anteriores_ok = config.promedio_volumen_sin_actual != None and len(config.historico_volumen) > 0 and config.historico_volumen[-1] > config.promedio_volumen_sin_actual * 1.3
+        volumen_velas_anteriores_ok = config.promedio_volumen_sin_actual != None and len(config.historico_volumen) > 0 \
+            and config.historico_volumen[-1] > config.promedio_volumen_sin_actual * 1.3
         mechas_ok_martillo = mecha_inf >= (2 * vela3_cuerpo) and mecha_sup < (0.2 * vela3_cuerpo)
         mechas_ok_martillo_inv = mecha_sup >= (2 * vela3_cuerpo) and mecha_inf < (0.2 * vela3_cuerpo)
 
         mechas_ok_estrella_fugaz = mecha_sup >= (2 * vela3_cuerpo) and mecha_inf <= (0.2 * vela3_cuerpo)
         mechas_ok_hombre_colgado = mecha_inf >= (2 * vela3_cuerpo) and mecha_sup < (0.2 * vela3_cuerpo)
-
-        if identificar_patrones.es_tendencia_bajista and identificar_patrones.macd_debil_bajista and velas_ok_env_alc and velas_cuerpo_env and velas_cierre_env_alc:
-                tendencia_alcista, nombre_patron = True, "Envolvente Alcista"
-        elif not identificar_patrones.es_tendencia_bajista and identificar_patrones.macd_debil_alcista and velas_ok_env_baj and velas_cuerpo_env and velas_cierre_env_baj:
-            tendencia_bajista, nombre_patron = True, "Envolvente Bajista"
+        
+        # ENVOLVENTE
+        if identificar_patrones.es_tendencia_bajista and identificar_patrones.macd_debil_bajista and velas_ok_env_alc and velas_cuerpo_env \
+            and velas_cierre_env_alc:
+                return True, False, "Envolvente Alcista"
+        elif not identificar_patrones.es_tendencia_bajista and identificar_patrones.macd_debil_alcista and velas_ok_env_baj and velas_cuerpo_env \
+            and velas_cierre_env_baj:
+            return False, True, "Envolvente Bajista"
+        
+        log_envolvente(velas_ok_env_alc, velas_ok_env_baj, velas_cuerpo_env)
 
         # MARTILLO
-        elif identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_bajista and mechas_ok_martillo:
-            tendencia_alcista, nombre_patron = True, "Martillo (Hammer)"
+        if identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_bajista \
+            and mechas_ok_martillo:
+            return True, False, "Martillo (Hammer)"
+        
+        log_martillo(volumen_velas_anteriores_ok)
+        
         # ESTRELLA FUGAZ
-        elif not identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_alcista and mechas_ok_estrella_fugaz:
-            tendencia_bajista, nombre_patron = True, "Estrella Fugaz"
+        if not identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_alcista \
+            and mechas_ok_estrella_fugaz:
+            return False, True, "Estrella Fugaz"
+
+        log_estrella_fugaz(volumen_velas_anteriores_ok)
+
         # MARTILLO INVERTIDO
-        elif identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_bajista and mechas_ok_martillo_inv:
-            tendencia_alcista, nombre_patron = True, "Martillo Invertido"
+        if identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_bajista \
+            and mechas_ok_martillo_inv:
+            return True, False, "Martillo Invertido"
+
+        log_martillo_invertido(volumen_velas_anteriores_ok)
+
         # HOMBRE COLGADO
-        elif not identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_alcista and mechas_ok_hombre_colgado:
-            tendencia_bajista, nombre_patron = True, "Hombre Colgado"
+        if not identificar_patrones.es_tendencia_bajista and volumen_velas_anteriores_ok and identificar_patrones.macd_debil_alcista \
+            and mechas_ok_hombre_colgado:
+            return False, True, "Hombre Colgado"
+    
+        log_hombre_colgado(volumen_velas_anteriores_ok)
 
     return tendencia_alcista, tendencia_bajista, nombre_patron
+
+def log_hombre_colgado(volumen_velas_anteriores_ok):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando HOMBRE COLGADO"
+
+        if not identificar_patrones.es_tendencia_bajista:
+            if not volumen_velas_anteriores_ok:
+                config.datos_graficos["log"] += "\n    🚨 Volumen de velas anteriores no cumple"
+            if not identificar_patrones.macd_debil_alcista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil alcista no detectado"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia alcista no detectada"
+
+def log_martillo_invertido(volumen_velas_anteriores_ok):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando MARTILLO INVERTIDO"
+
+        if identificar_patrones.es_tendencia_bajista:
+            if not volumen_velas_anteriores_ok:
+                config.datos_graficos["log"] += "\n    🚨 Volumen de velas anteriores no cumple"
+            if not identificar_patrones.macd_debil_bajista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil bajista no detectado"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia bajista no detectada"
+
+def log_estrella_fugaz(volumen_velas_anteriores_ok):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando ESTRELLA FUGAZ"
+
+        if not identificar_patrones.es_tendencia_bajista:
+            if not volumen_velas_anteriores_ok:
+                config.datos_graficos["log"] += "\n    🚨 Volumen de velas anteriores no cumple"
+            if not identificar_patrones.macd_debil_alcista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil alcista no detectado"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia alcista no detectada"
+
+def log_martillo(volumen_velas_anteriores_ok):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando MARTILLO"
+
+        if identificar_patrones.es_tendencia_bajista:
+            if not volumen_velas_anteriores_ok:
+                config.datos_graficos["log"] += "\n    🚨 Volumen de velas anteriores no cumple"
+            if not identificar_patrones.macd_debil_bajista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil bajista no detectado"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia bajista no detectada"
+
+            
+def log_envolvente(velas_ok_env_alc, velas_ok_env_baj, velas_cuerpo_env):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando ENVOLVENTE"
+        
+        if identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_bajista:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia bajista, pero MACD debil bajista no detectado"
+            if not velas_ok_env_alc:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia bajista, pero vela envolvente alcista no cumple"
+            if not velas_cuerpo_env:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia bajista, pero cuerpo de vela no cumple"
+        if not identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_alcista:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia alcista, pero MACD debil alcista no detectado"
+            if not velas_ok_env_baj:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia alcista, pero vela envolvente bajista no cumple"
+            if not velas_cuerpo_env:
+                config.datos_graficos["log"] += "\n    🚨 Tendencia alcista, pero cuerpo de vela no cumple"
+

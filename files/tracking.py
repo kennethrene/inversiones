@@ -4,17 +4,25 @@ import time
 import config
 import traceback
 
+def actualizar_estadisticas_cierre(ganada=False):
+    """Registra una operación ejecutada y actualiza si fue ganada o perdida."""
+    global estadisticas_bot
+    config.estadisticas_bot["total_ordenes"] += 1
+    if ganada: config.estadisticas_bot["ganadas"] += 1
+    else: config.estadisticas_bot["perdidas"] += 1
+
 def guardar_estadistica(evento):
     """
     Guarda una fila de datos en un archivo CSV para seguimiento estadístico.
     """
-    archivo = "estadisticas_bot.csv"
+    fecha = time.strftime('%Y-%m-%d')
+    archivo = "estadisticas_bot" + fecha + ".csv"
     
     # Definir los encabezados de las columnas
-    encabezados = ["Fecha-Hora", "Evento", "Activo", "Lote", "Precio Compra", "Precio Venta", "EMA 35", "EMA 50", "RSI", "MACD", "Beneficio %", "Beneficio Neto", "Operación Ganada", "Log" , "Motivo Cierre"]
+    encabezados = ["Hora", "Evento", "Activo", "Lote", "Precio Compra", "Precio Venta", "EMA 35", "EMA 50", "RSI", "MACD", "Beneficio %", "Beneficio Neto", "Resulado Operación", "Log" , "Motivo Cierre", "Patron Gráfico"]
     
     # Obtener el tiempo exacto usando tu formato
-    fecha_hora = time.strftime('%Y-%m-%d %H:%M:%S')
+    hora = time.strftime('%H:%M:%S')
     
     # Verificar si el archivo ya existe para saber si escribimos el encabezado
     existe_archivo = os.path.exists(archivo)
@@ -29,8 +37,12 @@ def guardar_estadistica(evento):
                 escritor.writerow(encabezados)
                 
             # Escribimos los datos de la operación actual
+            nombre_patron = ""
+            if config.datos_graficos['patron'] != "Ninguno":
+                nombre_patron = config.datos_graficos['patron']
+
             escritor.writerow([
-                fecha_hora,           # [0] Fecha-Hora
+                hora,                 # [0] Hora
                 evento,               # [1] Evento
                 config.activo_actual, # [2] Activo
                 config.valor_lote,    # [3] Lote
@@ -44,7 +56,8 @@ def guardar_estadistica(evento):
                 "",                   # [11] Beneficio Neto (Vacio al abrir)
                 "Pendiente",          # [12] Operación Ganada (Estado inicial)
                 config.log_operacion, # [13] Log
-                ""                    # [14] Motivo Cierre (Vacio al abrir)
+                "",                   # [14] Motivo Cierre (Vacio al abrir)
+                nombre_patron         # [15] Patrón gráfico detectado
             ])
             
         print(f"💾 [SISTEMA]: Datos guardados en estadísticas para {evento} en {config.activo_actual}.")
@@ -56,7 +69,8 @@ def actualizar_ultima_operacion(datos, ganada, motivo):
     Lee el archivo estadístico, modifica la última fila para agregar 
     el resultado en dólares y el evento, y vuelve a guardar el archivo.
     """
-    archivo = "estadisticas_bot.csv"
+    fecha = time.strftime('%Y-%m-%d')
+    archivo = "estadisticas_bot" + fecha + ".csv"
     
     if not os.path.exists(archivo):
         print("❌ ERROR: No existe el archivo de estadísticas para actualizar.")

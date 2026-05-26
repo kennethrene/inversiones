@@ -3,5 +3,10 @@
         "."
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "coda.advancedSettings": {
+        "backendPort": 61639,
+        "headersTimeout": 0,
+        "bodyTimeout": 0
+    }
 }

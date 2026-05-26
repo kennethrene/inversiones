@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 # Importación segura del módulo de trading original
 from patrones.identificar_patrones import identificar_patrones
-from config import datos_compartidos
+from config import datos_graficos
 
 # ===========================================================================
 # ⚙️ FIXTURE BASE Y REINICIADOR DE ESTADO
@@ -13,9 +13,9 @@ from config import datos_compartidos
 @pytest.fixture(autouse=True)
 def reiniciar_variables_globales():
     """Limpia el diccionario global antes de cada test."""
-    datos_compartidos["indice_senal"] = None
-    datos_compartidos["tipo_senal"] = None
-    datos_compartidos["senal_accion"] = "🔎 ESPERANDO CONFIGURACIÓN..."
+    datos_graficos["indice_senal"] = None
+    datos_graficos["tipo_senal"] = None
+    datos_graficos["patron"] = "🔎 ESPERANDO CONFIGURACIÓN..."
     yield
 
 def generar_base_12_velas():
@@ -46,7 +46,7 @@ def test_estrella_del_amanecer():
     with patch('config.historico_macd', [-0.5, -0.2]):
         resultado = identificar_patrones(df, valor_adx=30.0)
     assert "COMPRA" in resultado
-    assert "Estrella del Amanecer" in datos_compartidos["senal_accion"]
+    assert "Estrella del Amanecer" in datos_graficos["patron"]
 
 
 def test_estrella_del_atardecer():
@@ -62,7 +62,7 @@ def test_estrella_del_atardecer():
     with patch('config.historico_macd', [5, 2]):
         resultado = identificar_patrones(df, valor_adx=30.0)
     assert "VENTA" in resultado
-    assert "Estrella del Atardecer" in datos_compartidos["senal_accion"]
+    assert "Estrella del Atardecer" in datos_graficos["patron"]
 
 # ===========================================================================
 # 🧠 2. PATRONES TRADICIONALES DE 1 Y 2 VELAS (SEPARADOS)
@@ -80,7 +80,7 @@ def test_envolvente_alcista():
     with patch('config.promedio_volumen', 2), patch('config.historico_macd', [-5, -2]):
         resultado = identificar_patrones(df, valor_adx=30.0)
     assert "COMPRA" in resultado
-    assert "Envolvente Alcista" in datos_compartidos["senal_accion"]
+    assert "Envolvente Alcista" in datos_graficos["patron"]
 
 
 def test_envolvente_bajista():
@@ -96,7 +96,7 @@ def test_envolvente_bajista():
     with patch('config.promedio_volumen', 2), patch('config.historico_macd', [5, 4]):
         resultado = identificar_patrones(df, valor_adx=30.0)
     assert "VENTA" in resultado
-    assert "Envolvente Bajista" in datos_compartidos["senal_accion"]
+    assert "Envolvente Bajista" in datos_graficos["patron"]
 
 
 def test_martillo_alcista():
@@ -112,7 +112,7 @@ def test_martillo_alcista():
     with patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [-5, -4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=30.0)
     assert "COMPRA" in resultado
-    assert "Martillo (Hammer)" in datos_compartidos["senal_accion"]
+    assert "Martillo (Hammer)" in datos_graficos["patron"]
 
 def test_martillo_alcista_rojo():
     """Valida un Martillo Rojo con RSI en sobreventa y ADX fuerte (Señal de COMPRA completa)."""
@@ -128,7 +128,7 @@ def test_martillo_alcista_rojo():
     with patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [-5, -4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=32.0)    
     assert "COMPRA" in resultado
-    assert "Martillo (Hammer)" in datos_compartidos["senal_accion"]
+    assert "Martillo (Hammer)" in datos_graficos["patron"]
 
 def test_martillo_invertido_alcista():
     """Vela 3 Verde con mecha superior muy larga y mecha inferior casi nula, precedida de tendencia bajista."""
@@ -145,7 +145,7 @@ def test_martillo_invertido_alcista():
         resultado = identificar_patrones(df, valor_adx=30.0)
     
     assert "COMPRA" in resultado
-    assert "Martillo Invertido" in datos_compartidos["senal_accion"]
+    assert "Martillo Invertido" in datos_graficos["patron"]
 
 def test_estrella_fugaz_bajista():
     """Vela 3 Roja tipo Estrella Fugaz. Vela 2 muy grande para evitar Estrella del Atardecer y Envolvente."""
@@ -161,7 +161,7 @@ def test_estrella_fugaz_bajista():
         resultado = identificar_patrones(df, valor_adx=30.0)
     
     assert "VENTA" in resultado
-    assert "Estrella Fugaz" in datos_compartidos["senal_accion"]
+    assert "Estrella Fugaz" in datos_graficos["patron"]
 
 def test_hombre_colgado_bajista():
     """Vela 3 Roja tipo Estrella Fugaz invertida"""
@@ -178,7 +178,7 @@ def test_hombre_colgado_bajista():
         resultado = identificar_patrones(df, valor_adx=30.0)
     
     assert "VENTA" in resultado
-    assert "Hombre Colgado" in datos_compartidos["senal_accion"]
+    assert "Hombre Colgado" in datos_graficos["patron"]
 
 # ===========================================================================
 # 🧠 3. ESTRUCTURAS COMPLEJAS (12 VELAS)
@@ -222,7 +222,7 @@ def test_doble_techo():
     with patch('config.promedio_volumen', 2), patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [5, 4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=35.0)
     assert "VENTA" in resultado
-    assert "Doble Techo" in datos_compartidos["senal_accion"]
+    assert "Doble Techo" in datos_graficos["patron"]
 
 def test_doble_suelo():
     """Genera dos valles idénticos de precio en los últimos 12 periodos."""
@@ -262,7 +262,7 @@ def test_doble_suelo():
     with patch('config.promedio_volumen', 2), patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [-5, -4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=35.0)
     assert "COMPRA" in resultado
-    assert "Doble Suelo" in datos_compartidos["senal_accion"]
+    assert "Doble Suelo" in datos_graficos["patron"]
 
 def test_hombro_cabeza_hombro():
     """Genera un patrón HCH: Pico izquierdo, Cabeza alta, Pico derecho similar al izquierdo."""
@@ -305,7 +305,7 @@ def test_hombro_cabeza_hombro():
     with patch('config.promedio_volumen', 2), patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [5, 4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=40.0)
     assert "VENTA" in resultado
-    assert "Hombro Cabeza Hombro" in datos_compartidos["senal_accion"]
+    assert "Hombro Cabeza Hombro" in datos_graficos["patron"]
 
 def test_hombro_cabeza_hombro_invertido():
     """Genera un patrón HCH Invertido en los soportes mínimos."""
@@ -348,4 +348,26 @@ def test_hombro_cabeza_hombro_invertido():
     with patch('config.promedio_volumen', 2), patch('config.promedio_volumen_sin_actual', 2), patch('config.historico_macd', [-5, -4]), patch('config.historico_volumen', [10]):
         resultado = identificar_patrones(df, valor_adx=40.0)
     assert "COMPRA" in resultado
-    assert "Hombro Cabeza Hombro Invertido" in datos_compartidos["senal_accion"]
+    assert "Hombro Cabeza Hombro Invertido" in datos_graficos["patron"]
+
+# ===========================================================================
+# 🧠 4. PATRONES COMPUESTOS DE 1 VELA
+# ===========================================================================
+
+def test_marubozu_alcista_con_macd_positivo():
+    """Valida que un Marubozu Alcista con MACD > 0 devuelva tendencia alcista."""
+    
+    data = {
+        'Open':  [135.0, 132.0, 133.0, 128.0, 125.0, 121.0, 118.0, 115.0, 116.0, 110.0, 102.0, 100.0],
+        'High':  [136.0, 134.0, 134.0, 129.0, 126.0, 122.0, 119.0, 117.0, 117.0, 111.0, 103.0, 106.0],
+        'Low':   [131.0, 129.0, 127.0, 124.0, 120.0, 117.0, 113.0, 111.0, 109.0, 101.0,  99.0, 100.0],
+        'Close': [132.0, 133.0, 128.0, 125.0, 121.0, 118.0, 115.0, 112.0, 110.0, 102.0, 101.0, 106.0]
+    }
+    df = pd.DataFrame(data, index=pd.date_range("2026-01-01", periods=12, freq="1min"))
+    
+   
+    with patch('config.valor_macd', 0.85):
+        resultado = identificar_patrones(df, valor_adx=40.0)
+    
+    assert "COMPRA" in resultado
+    assert "Marubozu Alcista" in datos_graficos["patron"]

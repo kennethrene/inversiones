@@ -8,7 +8,8 @@ import re
 import config
 from indicadores.operaciones import ejecutar_operacion
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general
-from files.tracking import guardar_estadistica, actualizar_ultima_operacion
+from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
+from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 
 # 📊 HISTORIAL GLOBAL PARA CONSTRUIR EL GRÁFICO ASCII NATIVO
 historial_precios_recientes = []
@@ -17,64 +18,15 @@ hora_apertura_orden = None
 operacion_ganada = None
 maximo_rendimiento_alcanzado = 0.0  
 trailing_activado = False
-bloqueo_orden_vela = False
+bloqueo_ejecutar_orden = False
 minuto_anterior = ""
 minuto_ultima_orden = ""
 motivo_cierre_stats = "N/D"
 driver = None
 comando_limpiar = None
-boton_comprar = None
-boton_vender = None
-
-def actualizar_estadisticas_cierre(ganada=False):
-    """Registra una operación ejecutada y actualiza si fue ganada o perdida."""
-    global estadisticas_bot
-    config.estadisticas_bot["total_ordenes"] += 1
-    if ganada: config.estadisticas_bot["ganadas"] += 1
-    else: config.estadisticas_bot["perdidas"] += 1
-
-def extraer_datos_operacion(lista_cruda):
-    """
-    Procesa la lista plana de strings reales de xStation eliminando espacios
-    invisibles y aislando las cadenas puras para cada columna del bot.
-    """
-    # Si por desajuste del bucle principal pasara la matriz de detalles completa, extraemos la primera fila
-    if len(lista_cruda) > 0 and isinstance(lista_cruda[0], list):
-        lista_cruda = lista_cruda[0]
-
-    filtrados = [str(d).replace('\xa0', ' ').strip() for d in lista_cruda if str(d).strip()]
-    
-   
-    if len(filtrados) >= 2:
-        config.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
-        config.datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
-        
-    for i in range(len(filtrados) - 1):
-        texto_actual = filtrados[i].lower()
-        siguiente_texto = filtrados[i+1]
-        
-        if "volumen" == texto_actual:
-            config.datos_mapeados["Volumen"] = siguiente_texto
-        elif "valor del contrato" in texto_actual:
-            config.datos_mapeados["Valor Contrato"] = siguiente_texto
-        elif "precio actual" in texto_actual:
-            config.datos_mapeados["Precio Actual"] = siguiente_texto
-        elif "precio medio de apertura" in texto_actual:
-            config.datos_mapeados["Precio Apertura"] = siguiente_texto
-        elif "beneficio neto %" in texto_actual:
-            config.datos_mapeados["Beneficio %"] = siguiente_texto
-        elif "beneficio neto" == texto_actual:
-            config.datos_mapeados["Beneficio Neto"] = siguiente_texto
-            
-    # BÚSQUEDA EXHAUSTIVA DE RESPALDO SI EL MAPEO INDEPENDIENTE SE CORRE
-    if config.datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(config.datos_mapeados["Beneficio %"]):
-        for elemento in filtrados:
-            if "%" in elemento and ("-" in elemento or re.search(r'\d', elemento)):
-                config.datos_mapeados["Beneficio %"] = elemento
-                break
 
 def inicializar():
-    global bloqueo_orden_vela, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
+    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
 
     opciones = Options()
     opciones.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
@@ -87,7 +39,7 @@ def inicializar():
 
     comando_limpiar = 'cls' if os.name == 'nt' else 'clear'
 
-    bloqueo_orden_vela = False
+    bloqueo_ejecutar_orden = False
     minuto_anterior = ""
     minuto_ultima_orden = ""
     motivo_cierre_stats = "N/D"
@@ -98,94 +50,10 @@ def inicializar():
     print("=" * 75)
     time.sleep(1)
 
-def obtener_datos_operaciones():
-    return """
-        let botonesValidos = [];
-        let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
-        
-        todosLosBotones.forEach(btn => {
-            if (btn.offsetWidth > 0 || btn.offsetHeight > 0) { botonesValidos.push(btn); }
-        });
-        
-        if (botonesValidos.length === 0) {
-            let elementosGlobales = document.querySelectorAll("*");
-            elementosGlobales.forEach(el => {
-                if (el.shadowRoot) {
-                    let btnShadow = el.shadowRoot.querySelector("button[data-testid='close-button']");
-                    if (btnShadow && (btnShadow.offsetWidth > 0 || btnShadow.offsetHeight > 0)) {
-                        botonesValidos.push(btnShadow);
-                    }
-                }
-            });
-        }
-        
-        let datosOperaciones = [];
-        botonesValidos.forEach(btn => {
-            let fila = btn.closest("tr") || btn.closest("[role='row']") || btn.parentElement.parentElement;
-            if (fila) {
-                let textos = fila.innerText.split('\\n').map(t => t.trim()).filter(t => t.length > 0);
-                datosOperaciones.push(textos);
-            }
-        });
-        
-        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; }
-        return { "total": botonesValidos.length, "detalles": datosOperaciones };
-        """
-
-# ===========================================================================
-# ESCANEO CON PERFORADOR SHADOW DOM Y GESTIÓN DE MATRICES
-# ===========================================================================
-def obtener_datos_compra_venta(segundo_actual):
-    global boton_comprar, boton_vender
-
-    # Capturar los datos de compra, venta y lote (proporcion a comprar) de la pestaña actual
-    botones_vender = driver.find_elements(By.CSS_SELECTOR, "#sellButton, [id='sellButton']")
-    botones_comprar = driver.find_elements(By.CSS_SELECTOR, "#buyButton, [id='buyButton']")
-    botones_lote = driver.find_elements(By.CSS_SELECTOR, "span.ui-spinner-amount-value, input[name='stepperInput'], [id='volumeInput']")
-    activos = driver.find_elements(By.CLASS_NAME, "chart-panel-symbol-title")
-    
-    boton_comprar = None
-    boton_vender = None
-
-    for boton in botones_vender:
-        if boton.is_displayed() and boton.is_enabled():
-            if (segundo_actual != config.ultimo_segundo_procesado):
-                config.ultimo_valor_venta = config.valor_venta
-            config.valor_venta = boton.get_attribute("textContent").strip()
-            boton_vender = boton
-            break
-    for boton in botones_comprar:
-        if boton.is_displayed() and boton.is_enabled():
-            if (segundo_actual != config.ultimo_segundo_procesado):
-                config.ultimo_valor_compra = config.valor_compra
-            config.valor_compra = boton.get_attribute("textContent").strip()
-            boton_comprar = boton
-            break
-    for vol in botones_lote:
-        if vol.is_displayed():
-            texto_vol = vol.get_attribute("value") if vol.tag_name == "input" else vol.get_attribute("textContent").strip()
-            if texto_vol:
-                config.valor_lote = texto_vol.replace("USD", "").strip()
-                break
-    for activo in activos:
-        if activo.is_displayed():
-            texto_bruto = activo.get_attribute("textContent")
-            if texto_bruto:
-                activo_detectado = texto_bruto.replace("CFD", "").strip()
-                break
-    
-    if activo_detectado != config.activo_actual:
-        config.activo_actual = activo_detectado
-        config.promedio_volumen = 0
-        config.promedio_volumen_sin_actual = 0.0
-        config.historico_macd = []
-        config.historico_rsi = []
-
 def bot_scalping():
     global estadisticas_bot, hora_apertura_orden, operacion_ganada
     global maximo_rendimiento_alcanzado, trailing_activado, tiempo_ultimo_cierre
-    global bloqueo_orden_vela, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
-    global boton_comprar, boton_vender
+    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
     
     try:
         inicializar()
@@ -193,14 +61,14 @@ def bot_scalping():
         while True:
             try:
                 if minuto_ultima_orden != time.strftime('%M'):
-                    bloqueo_orden_vela = False
+                    bloqueo_ejecutar_orden = False
                 
                 minuto_actual = time.strftime('%M')                
                 if minuto_anterior == "": minuto_anterior = minuto_actual
 
                 segundo_actual = time.strftime('%H:%M:%S')
                 segundo_actual_int = time.strftime('%S')
-                obtener_datos_compra_venta(segundo_actual)
+                obtener_datos_compra_venta(segundo_actual, False, driver)
 
                 if segundo_actual != config.ultimo_segundo_procesado:
                     config.ultimo_segundo_procesado = segundo_actual
@@ -209,9 +77,6 @@ def bot_scalping():
                     config.ultimo_valor_volumen = config.valor_volumen
                     config.penultimo_segundo_procesado = segundo_actual_int
 
-                config.valor_macd = "No detectado"
-                config.valor_rsi = None
-                config.valor_adx = None
                 texto_macd = ""
                 texto_rsi = ""
                 texto_adx = ""
@@ -255,7 +120,7 @@ def bot_scalping():
                     except: continue
 
                 if minuto_ultima_orden != time.strftime('%M'):
-                    bloqueo_orden_vela = False
+                    bloqueo_ejecutar_orden = False
 
                 js_script_shadow = obtener_datos_operaciones()
                 
@@ -268,7 +133,6 @@ def bot_scalping():
                 beneficio_neto = None
                 
                 texto_trailing = ui_trailing(False, False, None, None)
-
                 texto_stop_loss = ui_stop_loss(False, None)
 
                 if operacion_activa and len(operaciones_detalles) > 0:
@@ -280,7 +144,6 @@ def bot_scalping():
                     # Llamamos a la extracción con la matriz limpia
                     extraer_datos_operacion(operaciones_detalles)
                     
-                    # --- FILTRADO DE SEGURIDAD EXTREMA DEL % ---
                     try:
                         texto_porcentaje = str(config.datos_mapeados["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
                         match_pct = re.search(r'([-+]?\d+\.\d+|-?\d+)', texto_porcentaje)
@@ -303,7 +166,7 @@ def bot_scalping():
                     if maximo_rendimiento_alcanzado >= config.PORCENTAJE_ACTIVACION_TRAILING:
                         trailing_activado = True
                         
-                    if trailing_activado:                        
+                    if trailing_activado:
                         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
                         texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
                         
@@ -375,32 +238,32 @@ def bot_scalping():
                         config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.ultimo_valor_volumen}"
 
                 # Ejecución automática de operaciones bajo confluencia estricta
-                if not bloqueo_orden_vela and not operacion_activa:
+                if not bloqueo_ejecutar_orden and not operacion_activa:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
                     if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
                     operacion = ejecutar_operacion()
     
-                    if boton_comprar and operacion == "Comprar":                            
-                            boton_comprar.click()
+                    if config.boton_comprar and operacion == "Comprar":                            
+                            config.boton_comprar.click()
                             os.system('say "Comprando" &')
-                            bloqueo_orden_vela = True
+                            bloqueo_ejecutar_orden = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()                            
                             config.datos_mapeados['Operacion'] = "Compra"
                             guardar_estadistica("Compra")
-                    elif boton_vender and operacion == "Vender":                            
-                            boton_vender.click()
+                    elif config.boton_vender and operacion == "Vender":                            
+                            config.boton_vender.click()
                             os.system('say "Vendiendo" &')
-                            bloqueo_orden_vela = True
+                            bloqueo_ejecutar_orden = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()                            
                             config.datos_mapeados['Operacion'] = "Venta"
                             guardar_estadistica("Venta")
 
                 # ===========================================================================
-                # MÓDULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
+                # MODULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
                 # ===========================================================================
                 if ejecutar_cierre and operacion_activa:
                     try:
@@ -418,10 +281,10 @@ def bot_scalping():
 
                         # Sincronizador de estadísticas con lectura de resultados reales
                         if beneficio_neto > 0:
-                            actualizar_ultima_operacion(config.datos_mapeados, "Si", motivo_cierre_stats)
+                            actualizar_ultima_operacion(config.datos_mapeados, "Ganada", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(True)
                         else:
-                            actualizar_ultima_operacion(config.datos_mapeados, "No", motivo_cierre_stats)
+                            actualizar_ultima_operacion(config.datos_mapeados, "Perdida", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(False)
 
                         time.sleep(5)
@@ -454,8 +317,6 @@ def bot_scalping():
             except Exception as e_bucle:
                 config.error = traceback.format_exc()
                 time.sleep(0.1)
-                
-            #time.sleep(0.1)
             
     except Exception as e:
         config.error = traceback.format_exc()
@@ -465,3 +326,4 @@ if __name__ == "__main__":
         bot_scalping()
     except KeyboardInterrupt:
         print("\n\nSistema apagado de forma segura")
+

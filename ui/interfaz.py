@@ -71,8 +71,8 @@ def ui_volumen(parent_text_content, texto_componente, texto_volumen_actual):
                 f"    Actual                   : {config.valor_volumen}\n"
                 f"    Ultimo                   : {config.ultimo_valor_volumen}\n"
                 f"    Histórico                : {config.historico_volumen}\n"
-                f"    Promedio                 : {config.promedio_volumen}\n"
-                f"    Promedio sin el actual   : {config.promedio_volumen_sin_actual}"
+                f"    Promedio                 : {config.promedio_volumen:.2f}\n"
+                f"    Promedio sin el actual   : {config.promedio_volumen_sin_actual:.2f}"
             )
     
     return texto_volumen_actual
@@ -150,7 +150,7 @@ def ui_operacion_activa(activo, rendimiento_actual):
 
         return (
             f"📌 [OPERACION]\n"
-            f"  ───────────────────────────────────\n"            
+            f"  ───────────────────────────────────\n"
             f"   Operación          : {config.datos_mapeados["Operacion"]}\n"
             f"   💱 Instrumento     : {config.datos_mapeados['Activo']} ({config.datos_mapeados['Tipo']})\n"
             f"   📦 Volumen (Lotes) : {config.datos_mapeados['Volumen']}\n"
@@ -170,7 +170,7 @@ def ui_estadisticas(motivo_cierre):
     win_rate = (config.estadisticas_bot["ganadas"] / config.estadisticas_bot["total_ordenes"] * 100) if config.estadisticas_bot["total_ordenes"] > 0 else 0.0
 
     return (
-        " 📊 CUADRO DE ESTADÍSTICAS Y MÉTRICAS DE EFECTIVIDAD (HOY):\n"
+        " 📊 CUADRO DE ESTADISTICAS Y METRICAS DE EFECTIVIDAD (HOY):\n"
         f"    └ Operaciones Ganadas  🟢 : {config.estadisticas_bot['ganadas']}\n"
         f"    └ Operaciones Perdidas 🔴 : {config.estadisticas_bot['perdidas']}\n"
         f"    └ Total Ejecutadas     ⚡ : {config.estadisticas_bot['total_ordenes']}\n"
@@ -185,4 +185,15 @@ def ui_general():
         f" 🔴 PRECIO ASK (VENTA)  : {config.valor_venta}\n"
         f" 🟢 PRECIO BID (COMPRA) : {config.valor_compra}\n"
         f" 🔢 LOTE                : {config.valor_lote}"
+    )
+
+def ui_patrones():
+    return (
+        f" 📌 [PATRONES]\n"
+        f"  ───────────────────────────────────\n"
+        f" 🏷️  PATRON IDENTIFICADO     : {config.datos_graficos['patron']}\n"
+        f" 🟢 ULTIMO PATRON DETECTADO : {config.ultimo_patron}\n\n"
+        f"   Log operación\n"
+        f"  ───────────────────────────────────"
+        f"   {config.datos_graficos["log"]}"
     )

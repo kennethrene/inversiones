@@ -4,6 +4,7 @@ import patrones.identificar_patrones as identificar_patrones
 
 # ESTRUCTURAS COMPLEJAS Y ESCÁNER COMBINATORIO (50 y 60 VELAS)
 def analizar_patrones():
+    config.datos_graficos["log"] = ""
     nombre_patron = "Ninguno"
     tendencia_alcista = False
     tendencia_bajista = False
@@ -71,7 +72,15 @@ def analizar_patrones():
                     linea_cuello_promedio = (cuello_1 + cuello_2) / 2
                     
                     if identificar_patrones.vela3_valor_cerro < linea_cuello_promedio:
-                        tendencia_bajista, nombre_patron = True, "Hombro Cabeza Hombro"
+                        return False, True, "Hombro Cabeza Hombro"
+                    else:
+                        log_hombro_cabeza_hombro(cabeza_es_alta, hombros_simetricos, valles_1, valles_2, linea_cuello_promedio)
+                else:
+                    log_hombro_cabeza_hombro(cabeza_es_alta, hombros_simetricos, valles_1, valles_2, None)
+            else:
+                log_hombro_cabeza_hombro(cabeza_es_alta, hombros_simetricos, None, None, None)            
+        else:
+            log_hombro_cabeza_hombro(None, None, None, None, None)
 
         # El HCH Invertido REQUIERE una tendencia bajista previa, un MACD debilitándose en ventas,
         # y al menos 3 suelos/valles identificados.
@@ -106,7 +115,16 @@ def analizar_patrones():
                     
                     # Gatillo de Entrada: El cierre de la última vela (Vela 12) rompe el cuello hacia arriba
                     if identificar_patrones.vela3_valor_cerro > linea_cuello_promedio:
-                        tendencia_alcista, nombre_patron = True, "Hombro Cabeza Hombro Invertido"
+                        return True, False, "Hombro Cabeza Hombro Invertido"
+                    else:
+                        log_hombro_cabeza_hombro_invertido(cabeza_es_profunda, hombros_simetricos, picos_1, picos_2, linea_cuello_promedio)
+                else:
+                    log_hombro_cabeza_hombro_invertido(cabeza_es_profunda, hombros_simetricos, picos_1, picos_2, None)
+            else:
+                log_hombro_cabeza_hombro_invertido(cabeza_es_profunda, hombros_simetricos, None, None, None)
+        else:
+            log_hombro_cabeza_hombro_invertido(None, None, None, None, None)    
+            
 
     # ESTRUCTURAS COMPLEJAS Y ESCÁNER COMBINATORIO (50 VELAS)
     if len(identificar_patrones.num_velas_disponibles) >= 50 and nombre_patron == "Ninguno":
@@ -121,15 +139,18 @@ def analizar_patrones():
                 pico_1 = maximos[pos_primer_pico]
                 
                 # Filtro 1: Tu regla de tolerancia de altura
-                if abs(pico_1 - pico_2) < (pico_1 * config.PORCENTAJE_TOLERANCIA_DOBLE_TS):
+                if abs(pico_1 - pico_2) < pico_1 * config.PORCENTAJE_TOLERANCIA_DOBLE_TS:
                     # Filtro 2: SOLUCIÓN AL VALLE (Buscamos el mínimo más bajo EN MEDIO de ambos picos)
                     minimos_intermedios = minimos[pos_primer_pico:pos_segundo_pico]
                     valle_central = min(minimos_intermedios) #if minimos_intermedios else pico_1
                     
                     # El valle debe haber caído un porcentaje mínimo respecto al primer pico
                     if valle_central <= pico_1 * (1 - config.PORCENTAJE_CAIDA_VALLE):
-                        tendencia_bajista, nombre_patron = True, "Doble Techo"
-                        break # Rompe el bucle, encontramos el patrón real
+                        return False, True, "Doble Techo"
+            else:
+                log_doble_techo(pico_2)
+        else:
+            log_doble_techo(None)
 
         # El Doble Suelo REQUIERE tendencia bajista previa y que el impulso vendedor disminuya
         if identificar_patrones.es_tendencia_bajista and identificar_patrones.macd_debil_bajista and len(identificar_patrones.suelos_indices) >= 2:            
@@ -150,7 +171,82 @@ def analizar_patrones():
                     
                     # La cresta debe haber subido un porcentaje mínimo respecto al primer suelo (forma de W)
                     if cresta_central >= suelo_1 * (1 + config.PORCENTAJE_REBOTE_CRESTA):
-                        tendencia_alcista, nombre_patron = True, "Doble Suelo"
-                        break # Encontrado, salimos del bucle para ejecutar la compra
+                        return True, False, "Doble Suelo"
+            else:
+                log_doble_suelo(suelo_2)
+        else:
+            log_doble_suelo(None)
     
     return tendencia_alcista, tendencia_bajista, nombre_patron
+
+def log_doble_suelo(suelo_2):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando DOBLE SUELO"
+
+        if identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_bajista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil bajista no detectado"
+            if len(identificar_patrones.suelos_indices) < 2:
+                config.datos_graficos["log"] += f"\n    🚨 Suelos no detectados - Requerido 2 - Actual: {len(identificar_patrones.suelos_indices)}"
+            if suelo_2 != None:
+                config.datos_graficos["log"] += "\n    🚨 No se encontraron suelos ni crestas adecuados"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia bajista no detectada"
+
+def log_doble_techo(pico_2):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando DOBLE TECHO"
+
+        if not identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_alcista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil alcista no detectado"
+            if len(identificar_patrones.picos_indices) < 2:
+                config.datos_graficos["log"] += f"\n    🚨 Picos no detectados - Requerido 2 - Actual: {len(identificar_patrones.picos_indices)}"
+            if pico_2 != None:
+                config.datos_graficos["log"] += "\n    🚨 No se encontraron picos ni valles adecuados"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia alcista no detectada"
+
+def log_hombro_cabeza_hombro_invertido(cabeza_es_profunda, hombros_simetricos, picos_1, picos_2, linea_cuello_promedio):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando HOMBRO-CABEZA-HOMBRO INVERTIDO"
+
+        if not identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_bajista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil bajista no detectado"
+            if len(identificar_patrones.suelos_indices) < 3:
+                config.datos_graficos["log"] += f"\n    🚨 Suelos no detectados - Requerido 3 - Actual: {len(identificar_patrones.suelos_indices)}"
+            if cabeza_es_profunda != None and not cabeza_es_profunda:
+                config.datos_graficos["log"] += "\n    🚨 Cabeza no es suficientemente profunda"
+            if hombros_simetricos != None and not hombros_simetricos:
+                config.datos_graficos["log"] += "\n    🚨 Hombros no son simétricos"
+            if picos_1 != None and not picos_1:
+                config.datos_graficos["log"] += "\n    🚨 Pico 1 no detectado"
+            if picos_2 != None and not picos_2:
+                config.datos_graficos["log"] += "\n    🚨 Pico 2 no detectado"
+            if linea_cuello_promedio != None and identificar_patrones.vela3_valor_cerro <= linea_cuello_promedio:
+                config.datos_graficos["log"] += f"\n    🚨 Valle 3 no cerró por encima de la linea de cuello - {identificar_patrones.vela3_valor_cerro} <= {linea_cuello_promedio}"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia alcista no detectada"
+
+def log_hombro_cabeza_hombro(cabeza_es_alta, hombros_simetricos, valles_1, valles_2, linea_cuello_promedio):
+    if len(config.historico_macd) > 1:
+        config.datos_graficos["log"] += "\n\n ℹ️  Evaluando HOMBRO-CABEZA-HOMBRO"
+
+        if not identificar_patrones.es_tendencia_bajista:
+            if not identificar_patrones.macd_debil_alcista:
+                config.datos_graficos["log"] += "\n    🚨 MACD débil alcista no detectado"
+            if len(identificar_patrones.picos_indices) < 3:
+                config.datos_graficos["log"] += f"\n    🚨 Picos no detectados - Requerido 3 - Actual: {len(identificar_patrones.picos_indices)}"
+            if cabeza_es_alta != None and not cabeza_es_alta:
+                config.datos_graficos["log"] += "\n    🚨 Cabeza no es suficientemente alta"
+            if hombros_simetricos != None and not hombros_simetricos:
+                config.datos_graficos["log"] += "\n    🚨 Hombros no son simétricos"
+            if valles_1 != None and not valles_1:
+                config.datos_graficos["log"] += "\n    🚨 Valle 1 no detectado"
+            if valles_2 != None and not valles_2:
+                config.datos_graficos["log"] += "\n    🚨 Valle 2 no detectado"
+            if linea_cuello_promedio != None and identificar_patrones.vela3_valor_cerro >= linea_cuello_promedio:
+                config.datos_graficos["log"] += f"\n    🚨 Valle 3 no cerró por debajo de la linea de cuello - {identificar_patrones.vela3_valor_cerro} >= {linea_cuello_promedio}"
+        else:
+            config.datos_graficos["log"] += "\n    🚨 Tendencia alcista no detectada"

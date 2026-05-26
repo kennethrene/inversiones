@@ -9,7 +9,7 @@ RSI_SOBREVENTA = 15.0 # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd
 RSI_SOBREVENTA_MACD = 30.0 # Nivel de sobreventa para compras para validar con macd
 ADX_TENDENCIA_FUERTE = 25.0 # Filtro de fuerza obligatorio para operar
-VOL_ADECUADO_OPERAR = 0
+VOL_ADECUADO_OPERAR = 500
 
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
 PORCENTAJE_STOP_LOSS = -10.0 # Límite estricto de pérdida permitida (debe ser NEGATIVO)
@@ -19,29 +19,25 @@ TAKE_PROFIT_MONETARIO = 5.0  # 🔥 Modifica este valor por la ganancia deseada
 PORCENTAJE_STOP_LOSS  = -10.0  # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
 
 # PARÁMETROS DE INDICADORES DE DOBLE TECHO / SUELO Y HOMBRE CABEZA HOMBRO
+ENABLE_COMPLEX_CANDLES = True
 PORCENTAJE_TOLERANCIA_DOBLE_TS = 0.015  # 1.5% de tolerancia entre picos
 PORCENTAJE_CAIDA_VALLE = 0.03           # Exige que el valle baje al menos un 3% desde el pico
 PORCENTAJE_REBOTE_CRESTA = 0.03         # Exige que la cresta suba al menos un 3% desde el suelo
-PORCENTAJE_TOLERANCIA_HOMBROS = 0.02        # 2% de diferencia máxima entre el hombro izquierdo y derecho
+PORCENTAJE_TOLERANCIA_HOMBROS = 0.02    # 2% de diferencia máxima entre el hombro izquierdo y derecho
 PORCENTAJE_FILTRO_CABEZA = 0.02         # La cabeza debe ser al menos un 2% más alta que los hombros
 
 SEGUNDOS_ENFRIAMIENTO = 60.0  # 🔥 Tiempo mínimo en segundos para esperar entre operaciones
 tiempo_ultimo_cierre = 0.0     # Rastreo del timestamp del último cierre
+
 # ===========================================================================
 # Estructura global en memoria para compartir los datos entre hilos
 # ===========================================================================
-datos_compartidos = {
-    "df_velas": pd.DataFrame(),
-    "sell": "0.00",
-    "buy": "0.00",
-    "status_patrones": "Recolectando ticks de mercado...",
-    "senal_accion": "🔎 ESPERANDO CONFIGURACIÓN...",
-    "indice_senal": None, # Guarda la estampa de tiempo de la confluencia
-    "tipo_senal": None, # COMPRA o VENTA
-    "rsi_live": "Buscando...",
-    "adx_live": "Buscando...",
-    "lucro": "Sin operaciones abiertas",
-    "trailing_status": "Inactivo"
+datos_graficos = {
+    "hora_vela": None, # Guarda la estampa de tiempo del momento que el patrón gráfico fue detectado
+    "datos_velas": pd.DataFrame(),
+    "operacion": None, # COMPRA o VENTA
+    "patron": "Ninguno",
+    "log": ""
 }
 
 datos_mapeados = {
@@ -61,7 +57,7 @@ estadisticas_bot = {
     "ganadas": 0,
     "perdidas": 0,
     "total_ordenes": 0,
-    "ultimo_patron_operado": "Ninguno"
+    "ultimo_patron_operado": ""
 }
 
 activo_actual = None
@@ -93,6 +89,8 @@ ultimo_valor_venta = None
 ultimo_segundo_procesado = 0
 penultimo_segundo_procesado = 0
 ultimo_valor_volumen = 0
+boton_comprar = None
+boton_vender = None
 error = None
 
 movimiento_abrupto = {
