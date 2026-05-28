@@ -70,12 +70,13 @@ def bot_scalping():
                 segundo_actual_int = time.strftime('%S')
                 obtener_datos_compra_venta(segundo_actual, False, driver)
 
-                if (len(config.preload_historico_macd) > 0):
+                if (config.cargar_datos):
                     config.historico_macd = config.preload_historico_macd
                     config.historico_rsi = config.preload_historico_rsi
                     config.historico_volumen = config.preload_historico_volumen
                     config.promedio_volumen_sin_actual = config.preload_promedio_volumen_sin_actual
                     config.promedio_volumen = config.preload_promedio_volumen
+                    config.cargar_datos = False
 
                 if segundo_actual != config.ultimo_segundo_procesado:
                     config.ultimo_segundo_procesado = segundo_actual

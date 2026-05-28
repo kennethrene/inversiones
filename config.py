@@ -88,9 +88,10 @@ CRITERIO_INDICADORES = [
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
-preload_historico_volumen = [6230, 1851, 1949, 1146, 2132, 1419]
-preload_historico_macd = [-0.92, 1.69, 4.7]
-preload_historico_rsi = [8.9, 8.9]
+cargar_datos = True
+preload_historico_volumen = [6230]
+preload_historico_macd = [-0.92]
+preload_historico_rsi = [8.9]
 preload_promedio_volumen_sin_actual = 4500
 preload_promedio_volumen = 4500
 
