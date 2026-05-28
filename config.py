@@ -3,20 +3,21 @@ import pandas as pd
 # ===========================================================================
 # ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
 # ===========================================================================
-TEMPORALIDAD_MINUTOS = 1 # Intervalo de corte de la vela (ej: 1, 5, 15)
-RSI_SOBRECOMPRA = 80.0 # Nivel estricto de sobrecompra para ventas
-RSI_SOBREVENTA = 15.0 # Nivel estricto de sobreventa para compras
+TEMPORALIDAD_MINUTOS = 5    # Intervalo de corte de la vela (ej: 1, 5, 15)
+RSI_SOBRECOMPRA = 80.0      # Nivel estricto de sobrecompra para ventas
+RSI_SOBREVENTA = 15.0       # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd
-RSI_SOBREVENTA_MACD = 30.0 # Nivel de sobreventa para compras para validar con macd
+RSI_SOBREVENTA_MACD = 30.0  # Nivel de sobreventa para compras para validar con macd
 ADX_TENDENCIA_FUERTE = 25.0 # Filtro de fuerza obligatorio para operar
 VOL_ADECUADO_OPERAR = 500
+CRITERIO_MACD_FUERTE = 1.5
 
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
-PORCENTAJE_STOP_LOSS = -10.0 # Límite estricto de pérdida permitida (debe ser NEGATIVO)
-PORCENTAJE_ACTIVACION_TRAILING = 10.0 # % mínimo de ganancia para activar la persecución inteligente
-DISTANCIA_TRAILING_MAXIMA = 5.0 # % máximo que permites que el precio retroceda desde su pico
-TAKE_PROFIT_MONETARIO = 5.0  # 🔥 Modifica este valor por la ganancia deseada
-PORCENTAJE_STOP_LOSS  = -10.0  # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
+PORCENTAJE_STOP_LOSS = -10.0            # Límite estricto de pérdida permitida (debe ser NEGATIVO)
+PORCENTAJE_ACTIVACION_TRAILING = 15.0   # % mínimo de ganancia para activar la persecución inteligente
+DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
+TAKE_PROFIT_MONETARIO = 5.0             # 🔥 Modifica este valor por la ganancia deseada
+PORCENTAJE_STOP_LOSS  = -20.0           # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
 
 # PARÁMETROS DE INDICADORES DE DOBLE TECHO / SUELO Y HOMBRE CABEZA HOMBRO
 ENABLE_COMPLEX_CANDLES = True
@@ -26,8 +27,72 @@ PORCENTAJE_REBOTE_CRESTA = 0.03         # Exige que la cresta suba al menos un 3
 PORCENTAJE_TOLERANCIA_HOMBROS = 0.02    # 2% de diferencia máxima entre el hombro izquierdo y derecho
 PORCENTAJE_FILTRO_CABEZA = 0.02         # La cabeza debe ser al menos un 2% más alta que los hombros
 
-SEGUNDOS_ENFRIAMIENTO = 60.0  # 🔥 Tiempo mínimo en segundos para esperar entre operaciones
-tiempo_ultimo_cierre = 0.0     # Rastreo del timestamp del último cierre
+SEGUNDOS_ENFRIAMIENTO = float(TEMPORALIDAD_MINUTOS * 60) / 2  # 🔥 Tiempo mínimo en segundos para esperar entre operaciones
+TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
+
+# ============================================================================
+# CONFIGURACION DE ESTRATEGIAS HABILITADAS
+# ============================================================================
+CRITERIO1 = False
+CRITERIO2 = False
+CRITERIO3 = True
+CRITERIO4 = False
+CRITERIO5 = False
+CRITERIO6 = True # Extremo
+
+CRITERIO_INDICADORES = [    
+    {},
+    {
+        # 1
+        "MACD": False,
+        "RSI": True,
+        "BOLLINGER": False,
+        "EMA": False
+    },
+    {
+        # 2
+        "MACD": False,
+        "RSI": True,
+        "BOLLINGER": False,
+        "EMA": False
+    },
+    {
+        # 3
+        "MACD": True,
+        "RSI": False,
+        "BOLLINGER": True,
+        "EMA": False
+    },
+    {
+        # 4
+        "MACD": False,
+        "RSI": True,
+        "BOLLINGER": False,
+        "EMA": True
+    },
+    {
+        # 5
+        "MACD": False,
+        "RSI": True,
+        "BOLLINGER": False,
+        "EMA": False
+    },
+    {
+        # 6
+        "MACD": False,
+        "RSI": False,
+        "BOLLINGER": False,
+        "EMA": False
+    }
+]
+# ============================================================================
+# Preload de valores iniciales para no esperar que pase el tiempo y tener info
+# ============================================================================
+preload_historico_volumen = [6230, 1851, 1949, 1146, 2132, 1419]
+preload_historico_macd = [-0.92, 1.69, 4.7]
+preload_historico_rsi = [8.9, 8.9]
+preload_promedio_volumen_sin_actual = 4500
+preload_promedio_volumen = 4500
 
 # ===========================================================================
 # Estructura global en memoria para compartir los datos entre hilos
@@ -48,8 +113,9 @@ datos_mapeados = {
     "Precio Actual": "N/D", 
     "Precio Apertura": "N/D", 
     "Beneficio %": "N/D", 
-    "Beneficio Neto": "N/D", 
-    "Operacion": "N/D"
+    "Beneficio Neto": "N/D",
+    "Operacion": "N/D",
+    "Criterio Apertura": "N/D"
 }
 
 # 🟢 CONTADORES DE ESTADÍSTICA EN VIVO
@@ -76,16 +142,23 @@ historico_velas = None
 ultimo_patron = "Ninguno"
 valor_rsi = 0.0
 valor_adx = 0
+valor_adx_compra = 0
+valor_adx_venta = 0
 valor_macd = 0
 valor_volumen = 0
 valor_ema_35 = 0
 valor_ema_50 = 0
+valor_bollinger_superior = 0
+valor_bollinger_media = 0
+valor_bollinger_inferior = 0
 ultimo_valor_rsi = 0
 log_operacion = None
 valor_compra = None
 valor_venta = None
 ultimo_valor_compra = None
 ultimo_valor_venta = None
+valor_compra_abrio = 0.0
+valor_venta_abrio = 0.0
 ultimo_segundo_procesado = 0
 penultimo_segundo_procesado = 0
 ultimo_valor_volumen = 0
