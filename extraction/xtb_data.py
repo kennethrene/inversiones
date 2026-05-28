@@ -125,6 +125,7 @@ def obtener_datos_compra_venta(segundo_actual, con_grafico, driver):
         config.promedio_volumen_sin_actual = 0.0
         config.historico_macd = []
         config.historico_rsi = []
+        config.historico_volumen = []
 
         if con_grafico:
             extraer_datos_velas()

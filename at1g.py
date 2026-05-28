@@ -200,7 +200,7 @@ def bot_scalping():
                     hora_apertura_orden = None
 
                 if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
-                    if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
                         continue
 
                     extraer_datos_velas()
@@ -243,7 +243,7 @@ def bot_scalping():
                 # Ejecución automática de operaciones bajo confluencia estricta
                 if not bloqueo_ejecutar_orden and not operacion_activa and config.valor_adx >= config.ADX_TENDENCIA_FUERTE:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
                     if "COMPRA" in resultado_confluencia and config.boton_comprar:
@@ -272,7 +272,7 @@ def bot_scalping():
                         config.historico_cuenta.append(beneficio_neto)
 
                          # 🔥 REGISTRAR EL TIEMPO EXACTO DEL CIERRE
-                        config.tiempo_ultimo_cierre = time.time()
+                        config.TIEMPO_ULTIMO_CIERRE = time.time()
 
                         hora_apertura_orden = None
                         trailing_activado = False

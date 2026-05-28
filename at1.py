@@ -7,7 +7,7 @@ import os
 import re
 import config
 from indicadores.operaciones import ejecutar_operacion
-from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general
+from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general, ui_bollinger
 from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
 from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 
@@ -70,6 +70,13 @@ def bot_scalping():
                 segundo_actual_int = time.strftime('%S')
                 obtener_datos_compra_venta(segundo_actual, False, driver)
 
+                if (len(config.preload_historico_macd) > 0):
+                    config.historico_macd = config.preload_historico_macd
+                    config.historico_rsi = config.preload_historico_rsi
+                    config.historico_volumen = config.preload_historico_volumen
+                    config.promedio_volumen_sin_actual = config.preload_promedio_volumen_sin_actual
+                    config.promedio_volumen = config.preload_promedio_volumen
+
                 if segundo_actual != config.ultimo_segundo_procesado:
                     config.ultimo_segundo_procesado = segundo_actual
                 
@@ -82,6 +89,8 @@ def bot_scalping():
                 texto_adx = ""
                 texto_volumen = ""
                 texto_ema = ""
+                texto_bollinger = ""
+                texto_indicadores = ""
 
                 # Escaneo de los indicadores técnicos
                 xpath_indicadores = "//*[contains(@class, 'indicator-value-label')]"
@@ -101,21 +110,16 @@ def bot_scalping():
                             texto_adx = ui_adx(parent_text_content, texto_componente, texto_adx)
                             texto_volumen = ui_volumen(parent_text_content, texto_componente, texto_volumen)
                             texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
+                            texto_bollinger = ui_bollinger(parent_text_content, texto_componente, texto_bollinger)
                             texto_separador = "-" * 75
-                            texto_final = "=" * 75
 
                             texto_indicadores = (
-                                f"{texto_separador}\n"
                                 f"{texto_macd}\n"
-                                f"{texto_separador}\n"
                                 f"{texto_rsi}\n"
-                                f"{texto_separador}\n"
                                 f"{texto_adx}\n"
-                                f"{texto_separador}\n"
                                 f"{texto_volumen}\n"
-                                f"{texto_separador}\n"
                                 f"{texto_ema}\n"
-                                f"{texto_final}"
+                                f"{texto_bollinger}"
                             )
                     except: continue
 
@@ -185,24 +189,26 @@ def bot_scalping():
                         operacion_ganada = True
                         motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
                     
-                    if beneficio_neto > 0 and float(config.valor_rsi) < config.RSI_SOBREVENTA_MACD and config.datos_mapeados["Operacion"] == "Venta":
+                    if beneficio_neto > 0 and float(config.valor_rsi) < config.RSI_SOBREVENTA_MACD and config.datos_mapeados["Operacion"] == "Venta" and config.datos_mapeados["Criterio Apertura"] != "Criterio 3":
                         ejecutar_cierre = True
                         operacion_ganada = True
-                        motivo_cierre_stats = f"Venta alcanzó el RSI de sobreventa - Se espera retroceso (+${beneficio_neto:.2f})"
+                        motivo_cierre_stats = f"Venta salió del RSI de sobreventa ({config.valor_rsi} < {config.RSI_SOBREVENTA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
                     
-                    if beneficio_neto > 0 and float(config.valor_rsi) > config.RSI_SOBRECOMPRA_MACD and config.datos_mapeados["Operacion"] == "Compra":
+                    if beneficio_neto > 0 and float(config.valor_rsi) > config.RSI_SOBRECOMPRA_MACD and config.datos_mapeados["Operacion"] == "Compra" and config.datos_mapeados["Criterio Apertura"] != "Criterio 3":
                         ejecutar_cierre = True
                         operacion_ganada = True
-                        motivo_cierre_stats = f"Venta alcanzó el RSI de sobrecompra - Se espera retroceso (+${beneficio_neto:.2f})"
+                        motivo_cierre_stats = f"Venta salió del RSI de sobrecompra ({config.valor_rsi} > {config.RSI_SOBRECOMPRA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
                 else:
                     texto_operacion_activa = ui_operacion_activa(False, None)
                     hora_apertura_orden = None
 
                 if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
-                    if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
                         continue
                     
                     minuto_anterior = minuto_actual
+                    config.valor_compra_abrio = config.valor_compra
+                    config.valor_venta_abrio = config.valor_venta
 
                     # Adicionar el valor de los indicadores
                     try:
@@ -211,7 +217,7 @@ def bot_scalping():
                     except (ValueError, TypeError):
                         config.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {config.valor_macd}"
 
-                    if len(config.historico_macd) > 2:
+                    if len(config.historico_macd) > 3:
                         config.historico_macd.pop(0)
 
                     try:
@@ -220,7 +226,7 @@ def bot_scalping():
                     except (ValueError, TypeError):
                         config.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {config.valor_rsi}"
 
-                    if len(config.historico_rsi) > 2:
+                    if len(config.historico_rsi) > 3:
                         config.historico_rsi.pop(0)
 
                     try:
@@ -240,14 +246,14 @@ def bot_scalping():
                 # Ejecución automática de operaciones bajo confluencia estricta
                 if not bloqueo_ejecutar_orden and not operacion_activa:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if time.time() - config.tiempo_ultimo_cierre < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
                     operacion = ejecutar_operacion()
     
                     if config.boton_comprar and operacion == "Comprar":                            
                             config.boton_comprar.click()
-                            os.system('say "Comprando" &')
+                            #os.system('say "Comprando" &')
                             bloqueo_ejecutar_orden = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()                            
@@ -255,7 +261,7 @@ def bot_scalping():
                             guardar_estadistica("Compra")
                     elif config.boton_vender and operacion == "Vender":                            
                             config.boton_vender.click()
-                            os.system('say "Vendiendo" &')
+                            #os.system('say "Vendiendo" &')
                             bloqueo_ejecutar_orden = True
                             minuto_ultima_orden = time.strftime('%M')
                             hora_apertura_orden = time.time()                            
@@ -268,16 +274,21 @@ def bot_scalping():
                 if ejecutar_cierre and operacion_activa:
                     try:
                         driver.execute_script("if(window.ultimoBotonCierre) { window.ultimoBotonCierre.click(); }")
-                        os.system(f'say "Posición cerrada por {motivo_cierre_stats}" &')
+                        #os.system(f'say "Posición cerrada por {motivo_cierre_stats}" &')
                         config.historico_cuenta.append(beneficio_neto)
 
                         # 🔥 REGISTRAR EL TIEMPO EXACTO DEL CIERRE
-                        config.tiempo_ultimo_cierre = time.time()
+                        config.TIEMPO_ULTIMO_CIERRE = time.time()
 
                         hora_apertura_orden = None
                         trailing_activado = False
                         maximo_rendimiento_alcanzado = 0.0
                         operacion_ganada = None
+                        config.PORCENTAJE_STOP_LOSS = -10.0
+                        config.PORCENTAJE_ACTIVACION_TRAILING = 15.0
+                        config.DISTANCIA_TRAILING_MAXIMA = 4.0
+                        config.TAKE_PROFIT_MONETARIO = 5.0
+                        config.PORCENTAJE_STOP_LOSS  = -20.0
 
                         # Sincronizador de estadísticas con lectura de resultados reales
                         if beneficio_neto > 0:
@@ -293,22 +304,18 @@ def bot_scalping():
 
                 # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
                 os.system(comando_limpiar)
-                print("=" * 75)
+                print("-" * 75)
                 print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
                 print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
-                print("=" * 75)
                 print(f"{ui_general()}")
                 print(f"{texto_indicadores}")
                 print(f"{texto_operacion_activa}")
-                print("-" * 75)
                 print(f"{texto_trailing}")
-                print("-" * 75)
                 print(f"{texto_stop_loss}")
                 print("-" * 75)
                 print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
-                print("=" * 75)
                 print(f"{ui_estadisticas(motivo_cierre_stats)}")
                 print("=" * 75)
                 print(f" 🔴 Ultimo error              : {config.error}")
