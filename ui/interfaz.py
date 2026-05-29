@@ -46,6 +46,11 @@ def ui_bollinger(parent_text_content, texto_componente, texto_bollinger_actual):
             config.valor_bollinger_media = float(valores_bollinger[1])
             config.valor_bollinger_inferior = float(valores_bollinger[2])
 
+            porcentaje_bollinger_estrecho = 100 * (float(config.valor_bollinger_superior) - float(config.valor_bollinger_inferior)) / float(config.valor_bollinger_media)
+            texto_estrecho = ""
+            if float(porcentaje_bollinger_estrecho) < float(config.porcentaje_bollinger_estrecho[config.activo_actual]):
+                texto_estrecho = f"🚧 Bandas de Bollinger estrechas -  {porcentaje_bollinger_estrecho:.2f} < {config.porcentaje_bollinger_estrecho[config.activo_actual]}\n" 
+
             return (
                 f"{texto_separador}\n"
                 f" 🧬 BANDAS DE BOLLINGER\n"
@@ -53,6 +58,7 @@ def ui_bollinger(parent_text_content, texto_componente, texto_bollinger_actual):
                 f"   Banda superior : {config.valor_bollinger_superior}\n"
                 f"   Banda media    : {config.valor_bollinger_media}\n"
                 f"   Banda inferior : {config.valor_bollinger_inferior}\n"
+                f"                    {texto_estrecho}"
             )
 
     return texto_bollinger_actual

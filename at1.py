@@ -10,6 +10,7 @@ from indicadores.operaciones import ejecutar_operacion
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general, ui_bollinger
 from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
 from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
+from indicadores.cierre import ejecutar_cierre
 
 # 📊 HISTORIAL GLOBAL PARA CONSTRUIR EL GRÁFICO ASCII NATIVO
 historial_precios_recientes = []
@@ -17,18 +18,20 @@ historial_precios_recientes = []
 hora_apertura_orden = None
 operacion_ganada = None
 maximo_rendimiento_alcanzado = 0.0  
-trailing_activado = False
 bloqueo_ejecutar_orden = False
 minuto_anterior = ""
 minuto_ultima_orden = ""
-motivo_cierre_stats = "N/D"
+motivo_cierre = "N/D"
 driver = None
 comando_limpiar = None
 
 def inicializar():
-    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
+    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre, driver, comando_limpiar
 
     opciones = Options()
+    opciones.add_argument("--headless=new")
+    opciones.add_argument("--window-size=1920,1080")
+    opciones.add_argument("--disable-gpu")
     opciones.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
     print("Intentando enlazar con Chrome en el puerto 9222...")
@@ -42,7 +45,7 @@ def inicializar():
     bloqueo_ejecutar_orden = False
     minuto_anterior = ""
     minuto_ultima_orden = ""
-    motivo_cierre_stats = "N/D"
+    motivo_cierre = "N/D"
 
     os.system(comando_limpiar)
     print("=" * 75)
@@ -53,7 +56,7 @@ def inicializar():
 def bot_scalping():
     global estadisticas_bot, hora_apertura_orden, operacion_ganada
     global maximo_rendimiento_alcanzado, trailing_activado, tiempo_ultimo_cierre
-    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre_stats, driver, comando_limpiar
+    global bloqueo_ejecutar_orden, minuto_anterior, minuto_ultima_orden, motivo_cierre, driver, comando_limpiar
     
     try:
         inicializar()
@@ -67,7 +70,6 @@ def bot_scalping():
                 if minuto_anterior == "": minuto_anterior = minuto_actual
 
                 segundo_actual = time.strftime('%H:%M:%S')
-                segundo_actual_int = time.strftime('%S')
                 obtener_datos_compra_venta(segundo_actual, False, driver)
 
                 if (config.cargar_datos):
@@ -76,14 +78,17 @@ def bot_scalping():
                     config.historico_volumen = config.preload_historico_volumen
                     config.promedio_volumen_sin_actual = config.preload_promedio_volumen_sin_actual
                     config.promedio_volumen = config.preload_promedio_volumen
+                    config.valor_compra_abrio = config.preload_valor_compra_abrio
+                    config.valor_venta_abrio = config.preload_valor_venta_abrio
                     config.cargar_datos = False
 
                 if segundo_actual != config.ultimo_segundo_procesado:
                     config.ultimo_segundo_procesado = segundo_actual
-                
-                if int(segundo_actual_int) - 2 >= int(config.penultimo_segundo_procesado):
+
+                segundo_hace_dos_segs = time.time() - 2
+                if segundo_hace_dos_segs >= config.penultimo_segundo_procesado:
                     config.ultimo_valor_volumen = config.valor_volumen
-                    config.penultimo_segundo_procesado = segundo_actual_int
+                    config.penultimo_segundo_procesado = segundo_hace_dos_segs
 
                 texto_macd = ""
                 texto_rsi = ""
@@ -134,7 +139,7 @@ def bot_scalping():
                 operaciones_detalles = resultado_shadow["detalles"]
                 
                 operacion_activa = total_posiciones > 0
-                ejecutar_cierre = False
+                ejecutar_cierre_operacion = False
                 beneficio_neto = None
                 
                 texto_trailing = ui_trailing(False, False, None, None)
@@ -144,7 +149,6 @@ def bot_scalping():
                     if hora_apertura_orden is None:
                         hora_apertura_orden = time.time()
                         maximo_rendimiento_alcanzado = -999.0  
-                        trailing_activado = False
                     
                     # Llamamos a la extracción con la matriz limpia
                     extraer_datos_operacion(operaciones_detalles)
@@ -156,49 +160,25 @@ def bot_scalping():
                     except:
                         rendimiento_actual = 0.0
                     
-                    # ─── LÓGICA DE CONTROL POR % NATIVO: STOP LOSS DIRECTO ───
-                    texto_stop_loss = ui_stop_loss(True, rendimiento_actual)
-                    
-                    if rendimiento_actual <= config.PORCENTAJE_STOP_LOSS:
-                        motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
-                        operacion_ganada = False
-                        ejecutar_cierre = True
-                    
-                    # ─── LÓGICA DE CONTROL POR % NATIVO: TRAILING STOP ───
+                    texto_stop_loss = ui_stop_loss(True, rendimiento_actual)                    
+                   
+                    # ─── PARAMETROS DE TRAILING STOP ───
                     if rendimiento_actual > maximo_rendimiento_alcanzado:
                         maximo_rendimiento_alcanzado = rendimiento_actual
                         
                     if maximo_rendimiento_alcanzado >= config.PORCENTAJE_ACTIVACION_TRAILING:
-                        trailing_activado = True
+                        config.trailing_activado = True
                         
-                    if trailing_activado:
+                    if config.trailing_activado:
                         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
                         texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
-                        
-                        if caida_desde_pico >= config.DISTANCIA_TRAILING_MAXIMA:
-                            motivo_cierre_stats = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
-                            ejecutar_cierre = True
-                            operacion_ganada = True
                     else:
                         texto_trailing = ui_trailing(True, False, rendimiento_actual, None)
 
                     texto_operacion_activa = ui_operacion_activa(True, rendimiento_actual)
                     beneficio_neto =  float(config.datos_mapeados['Beneficio Neto'])
 
-                    if beneficio_neto >= config.TAKE_PROFIT_MONETARIO:
-                        ejecutar_cierre = True
-                        operacion_ganada = True
-                        motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
-                    
-                    if beneficio_neto > 0 and float(config.valor_rsi) < config.RSI_SOBREVENTA_MACD and config.datos_mapeados["Operacion"] == "Venta" and config.datos_mapeados["Criterio Apertura"] != "Criterio 3":
-                        ejecutar_cierre = True
-                        operacion_ganada = True
-                        motivo_cierre_stats = f"Venta salió del RSI de sobreventa ({config.valor_rsi} < {config.RSI_SOBREVENTA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
-                    
-                    if beneficio_neto > 0 and float(config.valor_rsi) > config.RSI_SOBRECOMPRA_MACD and config.datos_mapeados["Operacion"] == "Compra" and config.datos_mapeados["Criterio Apertura"] != "Criterio 3":
-                        ejecutar_cierre = True
-                        operacion_ganada = True
-                        motivo_cierre_stats = f"Venta salió del RSI de sobrecompra ({config.valor_rsi} > {config.RSI_SOBRECOMPRA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
+                    ejecutar_cierre_operacion, operacion_ganada, motivo_cierre = ejecutar_cierre(maximo_rendimiento_alcanzado, rendimiento_actual)
                 else:
                     texto_operacion_activa = ui_operacion_activa(False, None)
                     hora_apertura_orden = None
@@ -272,7 +252,7 @@ def bot_scalping():
                 # ===========================================================================
                 # MODULO DE GATILLADO Y ACCIÓN DE CIERRE DIRECTO
                 # ===========================================================================
-                if ejecutar_cierre and operacion_activa:
+                if ejecutar_cierre_operacion and operacion_activa:
                     try:
                         driver.execute_script("if(window.ultimoBotonCierre) { window.ultimoBotonCierre.click(); }")
                         #os.system(f'say "Posición cerrada por {motivo_cierre_stats}" &')
@@ -285,18 +265,18 @@ def bot_scalping():
                         trailing_activado = False
                         maximo_rendimiento_alcanzado = 0.0
                         operacion_ganada = None
-                        config.PORCENTAJE_STOP_LOSS = -10.0
                         config.PORCENTAJE_ACTIVACION_TRAILING = 15.0
                         config.DISTANCIA_TRAILING_MAXIMA = 4.0
                         config.TAKE_PROFIT_MONETARIO = 5.0
-                        config.PORCENTAJE_STOP_LOSS  = -20.0
+                        config.PORCENTAJE_STOP_LOSS  = -10.0
+                        config.trailing_activado = False
 
                         # Sincronizador de estadísticas con lectura de resultados reales
                         if beneficio_neto > 0:
-                            actualizar_ultima_operacion(config.datos_mapeados, "Ganada", motivo_cierre_stats)
+                            actualizar_ultima_operacion(config.datos_mapeados, "Ganada", motivo_cierre)
                             actualizar_estadisticas_cierre(True)
                         else:
-                            actualizar_ultima_operacion(config.datos_mapeados, "Perdida", motivo_cierre_stats)
+                            actualizar_ultima_operacion(config.datos_mapeados, "Perdida", motivo_cierre)
                             actualizar_estadisticas_cierre(False)
 
                         time.sleep(5)
@@ -317,7 +297,7 @@ def bot_scalping():
                 print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
-                print(f"{ui_estadisticas(motivo_cierre_stats)}")
+                print(f"{ui_estadisticas(motivo_cierre)}")
                 print("=" * 75)
                 print(f" 🔴 Ultimo error              : {config.error}")
                 print("=" * 75)
