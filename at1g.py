@@ -13,12 +13,12 @@ import matplotlib
 matplotlib.use('TkAgg') # Fuerza a tu Mac a abrir la ventana interactiva independiente
 import mplfinance as mpf
 import matplotlib.pyplot as plt
-import config.config as config
+import configuracion.parametros as parametros
 from patrones.identificar_patrones import identificar_patrones
-from extraction.candles import extraer_velas
-from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
+from extraccion.velas import extraer_velas
+from extraccion.datos_xtb import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_datos_generales, ui_patrones
-from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
+from archivos.seguimiento import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
 
 hora_apertura_orden = None
 operacion_ganada = None
@@ -71,12 +71,12 @@ def bot_scalping():
                 segundo_actual_int = time.strftime('%S')
                 obtener_datos_compra_venta(segundo_actual, True, driver)
 
-                if segundo_actual != config.ultimo_segundo_procesado:
-                    config.ultimo_segundo_procesado = segundo_actual
+                if segundo_actual != parametros.ultimo_segundo_procesado:
+                    parametros.ultimo_segundo_procesado = segundo_actual
                 
-                if int(segundo_actual_int) - 2 >= int(config.penultimo_segundo_procesado):
-                    config.ultimo_valor_volumen = config.valor_volumen
-                    config.penultimo_segundo_procesado = segundo_actual_int
+                if int(segundo_actual_int) - 2 >= int(parametros.penultimo_segundo_procesado):
+                    parametros.ultimo_valor_volumen = parametros.valor_volumen
+                    parametros.penultimo_segundo_procesado = segundo_actual_int
 
                 texto_macd = ""
                 texto_rsi = ""
@@ -97,8 +97,8 @@ def bot_scalping():
                             if not child_text_content: continue
                             texto_componente = child_text_content.replace(",", ".")
                             
-                            texto_macd = ui_macd(parent_text_content, texto_componente, config.historico_macd, texto_macd)
-                            texto_rsi = ui_rsi(parent_text_content, texto_componente, config.historico_rsi, texto_rsi)
+                            texto_macd = ui_macd(parent_text_content, texto_componente, parametros.historico_macd, texto_macd)
+                            texto_rsi = ui_rsi(parent_text_content, texto_componente, parametros.historico_rsi, texto_rsi)
                             texto_adx = ui_adx(parent_text_content, texto_componente, texto_adx)
                             texto_volumen = ui_volumen(parent_text_content, texto_componente, texto_volumen)
                             texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
@@ -146,7 +146,7 @@ def bot_scalping():
                     extraer_datos_operacion(operaciones_detalles)
                     
                     try:
-                        texto_porcentaje = str(config.datos_mapeados["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
+                        texto_porcentaje = str(parametros.datos_mapeados["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
                         match_pct = re.search(r'([-+]?\d+\.\d+|-?\d+)', texto_porcentaje)
                         rendimiento_actual = float(match_pct.group(1)) if match_pct else 0.0
                     except:
@@ -155,8 +155,8 @@ def bot_scalping():
                     # ─── LÓGICA DE CONTROL POR % NATIVO: STOP LOSS DIRECTO ───
                     texto_stop_loss = ui_stop_loss(True, rendimiento_actual)
 
-                    if rendimiento_actual <= config.STOP_LOSS:
-                        config.motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
+                    if rendimiento_actual <= parametros.STOP_LOSS:
+                        parametros.motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
                         operacion_ganada = False
                         ejecutar_cierre = True
                     
@@ -164,34 +164,34 @@ def bot_scalping():
                     if rendimiento_actual > maximo_rendimiento_alcanzado:
                         maximo_rendimiento_alcanzado = rendimiento_actual
                         
-                    if maximo_rendimiento_alcanzado >= config.TRAILING_STOP:
+                    if maximo_rendimiento_alcanzado >= parametros.TRAILING_STOP:
                         trailing_activado = True
 
                     if trailing_activado:                        
                         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
                         texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
                         
-                        if caida_desde_pico >= config.DISTANCIA_TRAILING_MAXIMA:
-                            config.motivo_cierre_stats = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
+                        if caida_desde_pico >= parametros.DISTANCIA_TRAILING_MAXIMA:
+                            parametros.motivo_cierre_stats = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
                             ejecutar_cierre = True
                             operacion_ganada = True
                     else:
-                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {config.TRAILING_STOP}%)"
+                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {parametros.TRAILING_STOP}%)"
 
                     texto_operacion_activa = ui_operacion_activa(True, rendimiento_actual)
-                    beneficio_neto =  float(config.datos_mapeados['Beneficio Neto'])
+                    beneficio_neto =  float(parametros.datos_mapeados['Beneficio Neto'])
 
-                    if beneficio_neto >= config.TAKE_PROFIT:
+                    if beneficio_neto >= parametros.TAKE_PROFIT:
                         ejecutar_cierre = True
                         operacion_ganada = True
-                        config.motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
+                        parametros.motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
 
-                    if beneficio_neto > 0 and float(config.valor_rsi) < config.RSI_SOBREVENTA_MACD and config.datos_mapeados["Operacion"] == "Venta":
+                    if beneficio_neto > 0 and float(parametros.valor_rsi) < parametros.RSI_SOBREVENTA_MACD and parametros.datos_mapeados["Operacion"] == "Venta":
                         ejecutar_cierre = True
                         operacion_ganada = True
                         motivo_cierre_stats = f"Venta alcanzó el RSI de sobreventa - Se espera retroceso (+${beneficio_neto:.2f})"
                     
-                    if beneficio_neto > 0 and float(config.valor_rsi) > config.RSI_SOBRECOMPRA_MACD and config.datos_mapeados["Operacion"] == "Compra":
+                    if beneficio_neto > 0 and float(parametros.valor_rsi) > parametros.RSI_SOBRECOMPRA_MACD and parametros.datos_mapeados["Operacion"] == "Compra":
                         ejecutar_cierre = True
                         operacion_ganada = True
                         motivo_cierre_stats = f"Venta alcanzó el RSI de sobrecompra - Se espera retroceso (+${beneficio_neto:.2f})"
@@ -199,80 +199,80 @@ def bot_scalping():
                     texto_operacion_activa = ui_operacion_activa(False, None)
                     hora_apertura_orden = None
 
-                if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
-                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
+                if int(minuto_actual) % parametros.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
+                    if time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue
 
                     extraer_datos_velas()
-                    resultado_confluencia = identificar_patrones(config.historico_velas, config.valor_adx)
+                    resultado_confluencia = identificar_patrones(parametros.historico_velas, parametros.valor_adx)
                     minuto_anterior = minuto_actual
 
                     # Adicionar el valor de los indicadores
                     try:
-                        valor_numerico = float(config.valor_macd)
-                        config.historico_macd.append(valor_numerico)
+                        valor_numerico = float(parametros.valor_macd)
+                        parametros.historico_macd.append(valor_numerico)
                     except (ValueError, TypeError):
-                        config.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {config.valor_macd}"
+                        parametros.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {parametros.valor_macd}"
 
-                    if len(config.historico_macd) > 2:
-                        config.historico_macd.pop(0)
+                    if len(parametros.historico_macd) > 2:
+                        parametros.historico_macd.pop(0)
 
                     try:
-                        valor_numerico = float(config.valor_rsi)
-                        config.historico_rsi.append(valor_numerico)
+                        valor_numerico = float(parametros.valor_rsi)
+                        parametros.historico_rsi.append(valor_numerico)
                     except (ValueError, TypeError):
-                        config.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {config.valor_rsi}"
+                        parametros.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {parametros.valor_rsi}"
 
-                    if len(config.historico_rsi) > 2:
-                        config.historico_rsi.pop(0)
+                    if len(parametros.historico_rsi) > 2:
+                        parametros.historico_rsi.pop(0)
 
                     try:
-                        config.historico_volumen.append(config.ultimo_valor_volumen)
-                        config.penultimo_segundo_procesado = 0
-                        config.ultimo_valor_volumen = 0
-                        if len(config.historico_volumen) > 6:
-                            config.historico_volumen.pop(0)
-                            config.promedio_volumen = sum(config.historico_volumen) / 6
-                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1]) / 5
-                        elif len(config.historico_volumen) > 0:
-                            config.promedio_volumen = sum(config.historico_volumen) / len(config.historico_volumen)
-                            config.promedio_volumen_sin_actual = sum(config.historico_volumen[:-1]) / len(config.historico_volumen[:-1]) if len(config.historico_volumen) > 1 else 0
+                        parametros.historico_volumen.append(parametros.ultimo_valor_volumen)
+                        parametros.penultimo_segundo_procesado = 0
+                        parametros.ultimo_valor_volumen = 0
+                        if len(parametros.historico_volumen) > 6:
+                            parametros.historico_volumen.pop(0)
+                            parametros.promedio_volumen = sum(parametros.historico_volumen) / 6
+                            parametros.promedio_volumen_sin_actual = sum(parametros.historico_volumen[-6:-1]) / 5
+                        elif len(parametros.historico_volumen) > 0:
+                            parametros.promedio_volumen = sum(parametros.historico_volumen) / len(parametros.historico_volumen)
+                            parametros.promedio_volumen_sin_actual = sum(parametros.historico_volumen[:-1]) / len(parametros.historico_volumen[:-1]) if len(parametros.historico_volumen) > 1 else 0
                     except (ValueError, TypeError):
-                        config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.ultimo_valor_volumen}"
+                        parametros.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {parametros.ultimo_valor_volumen}"
 
                 # Ejecución automática de operaciones bajo confluencia estricta
-                if not bloqueo_ejecutar_orden and not operacion_activa and config.valor_adx >= config.ADX_TENDENCIA_FUERTE:
+                if not bloqueo_ejecutar_orden and not operacion_activa and parametros.valor_adx >= parametros.ADX_TENDENCIA_FUERTE:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
-                    if "COMPRA" in resultado_confluencia and config.boton_comprar:
-                        config.boton_comprar.click()
+                    if "COMPRA" in resultado_confluencia and parametros.boton_comprar:
+                        parametros.boton_comprar.click()
                         os.system('say "Comprando" &')
                         bloqueo_ejecutar_orden = True
                         minuto_ultima_orden = time.strftime('%M')
                         hora_apertura_orden = time.time()
-                        config.datos_mapeados['Operacion'] = "Compra"
+                        parametros.datos_mapeados['Operacion'] = "Compra"
                         guardar_estadistica("Compra")
-                        config.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
-                    elif "VENTA" in resultado_confluencia and config.boton_vender:
-                        config.boton_vender.click()
+                        parametros.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
+                    elif "VENTA" in resultado_confluencia and parametros.boton_vender:
+                        parametros.boton_vender.click()
                         os.system('say "Vendiendo" &')
                         bloqueo_ejecutar_orden = True
                         minuto_ultima_orden = time.strftime('%M')
                         hora_apertura_orden = time.time()
-                        config.datos_mapeados['Operacion'] = "Venta"
-                        config.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
+                        parametros.datos_mapeados['Operacion'] = "Venta"
+                        parametros.estadisticas_bot["ultimo_patron_operado"] = resultado_confluencia.split("_")[-1]
                 
                 # MÓDULO DE ACCIÓN DE CIERRE
                 if ejecutar_cierre and operacion_activa:
                     try:
                         driver.execute_script("if(window.ultimoBotonCierre) { window.ultimoBotonCierre.click(); }")
-                        os.system(f'say "Posición cerrada por {config.motivo_cierre_stats}" &')
-                        config.historico_cuenta.append(beneficio_neto)
+                        os.system(f'say "Posición cerrada por {parametros.motivo_cierre_stats}" &')
+                        parametros.historico_cuenta.append(beneficio_neto)
 
                          # 🔥 REGISTRAR EL TIEMPO EXACTO DEL CIERRE
-                        config.TIEMPO_ULTIMO_CIERRE = time.time()
+                        parametros.TIEMPO_ULTIMO_CIERRE = time.time()
 
                         hora_apertura_orden = None
                         trailing_activado = False
@@ -281,15 +281,15 @@ def bot_scalping():
 
                         # Sincronizador de estadísticas con lectura de resultados reales
                         if beneficio_neto > 0:
-                            actualizar_ultima_operacion(config.datos_mapeados, "Si", motivo_cierre_stats)
+                            actualizar_ultima_operacion(parametros.datos_mapeados, "Si", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(True)
                         else:
-                            actualizar_ultima_operacion(config.datos_mapeados, "No", motivo_cierre_stats)
+                            actualizar_ultima_operacion(parametros.datos_mapeados, "No", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(False)
                         
                         time.sleep(5)
                     except Exception as error_ejecucion:
-                        config.error = traceback.format_exc()
+                        parametros.error = traceback.format_exc()
                     
                 # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
                 os.system(comando_limpiar)
@@ -305,7 +305,7 @@ def bot_scalping():
                 print("-" * 75)
                 print(f"{texto_stop_loss}")
                 print("-" * 75)
-                print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT}")
+                print(f" 💰 TAKE PROFIT : {parametros.TAKE_PROFIT}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                 print("=" * 75)
@@ -313,14 +313,14 @@ def bot_scalping():
                 print("=" * 75)
                 print(f"{ui_estadisticas(motivo_cierre_stats)}")
                 print("=" * 75)
-                print(f" 🔴 Ultimo error              : {config.error}")
+                print(f" 🔴 Ultimo error              : {parametros.error}")
                 print("=" * 75)
                     
             except Exception as error_ejecucion:
-                config.error = traceback.format_exc()
+                parametros.error = traceback.format_exc()
                 pass
     except Exception as e: 
-        config.error = traceback.format_exc()
+        parametros.error = traceback.format_exc()
 
 # ===========================================================================
 # 📈 MOTOR GRÁFICO REAL TIME PARA MAC OS (NATIVO ASÍNCRONO)
@@ -330,9 +330,9 @@ from matplotlib.animation import FuncAnimation
 def loop_render_grafico(frame, fig, ax):
     """Refresca la GUI de manera segura interactuando directamente con Matplotlib"""
     try:
-        datos_vela = config.datos_graficos["datos_velas"].copy()
-        hora_vela = config.datos_graficos["hora_vela"]
-        operacion = config.datos_graficos["operacion"]
+        datos_vela = parametros.datos_graficos["datos_velas"].copy()
+        hora_vela = parametros.datos_graficos["hora_vela"]
+        operacion = parametros.datos_graficos["operacion"]
         
         # Generar set de prueba inicial para que el gráfico no nazca vacío
         if datos_vela.empty:
@@ -361,14 +361,14 @@ def loop_render_grafico(frame, fig, ax):
             
         fig.canvas.draw_idle() # Redibujo eficiente optimizado para backend TkAgg
     except Exception as e:
-        config.error = traceback.format_exc()
+        parametros.error = traceback.format_exc()
         pass
 
 def extraer_datos_velas():
-    config.lista_velas_acumuladas = extraer_velas()
-    config.historico_velas = pd.DataFrame(config.lista_velas_acumuladas)
-    config.datos_graficos["datos_velas"] = config.historico_velas
-    config.historico_velas.index = pd.date_range(start="2026-01-01 09:30", periods=len(config.historico_velas), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
+    parametros.lista_velas_acumuladas = extraer_velas()
+    parametros.historico_velas = pd.DataFrame(parametros.lista_velas_acumuladas)
+    parametros.datos_graficos["datos_velas"] = parametros.historico_velas
+    parametros.historico_velas.index = pd.date_range(start="2026-01-01 09:30", periods=len(parametros.historico_velas), freq=f"{parametros.TEMPORALIDAD_MINUTOS}min")
 
 def iniciar_renderizado_grafico_mac():
     # Inicialización de la figura y el eje nativo

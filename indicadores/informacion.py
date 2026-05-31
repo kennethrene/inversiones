@@ -1,4 +1,4 @@
-import config
+import configuracion.parametros as parametros
 from selenium.webdriver.common.by import By
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_volumen, ui_bollinger
 
@@ -10,15 +10,15 @@ texto_ema = ""
 texto_bollinger = ""
 
 def precargar_datos():
-    if (config.cargar_datos):
-        config.historico_macd = config.preload_historico_macd
-        config.historico_rsi = config.preload_historico_rsi
-        config.historico_volumen = config.preload_historico_volumen
-        config.promedio_volumen_sin_actual = config.preload_promedio_volumen_sin_actual
-        config.promedio_volumen = config.preload_promedio_volumen
-        config.valor_compra_abrio = config.preload_valor_compra_abrio
-        config.valor_venta_abrio = config.preload_valor_venta_abrio
-        config.cargar_datos = False
+    if (parametros.CARGAR_DATOS):
+        parametros.historico_macd = parametros.PRELOAD_HISTORICO_MACD
+        parametros.historico_rsi = parametros.PRELOAD_HISTORICO_RSI
+        parametros.historico_volumen = parametros.PRELOAD_HISTORICO_VOLUMEN
+        parametros.promedio_volumen_sin_actual = parametros.PRELOAD_PROMEDIO_VOLUMEN_SIN_ACTUAL
+        parametros.promedio_volumen = parametros.PRELOAD_PROMEDIO_VOLUMEN
+        parametros.valor_compra_abrio = parametros.PRELOAD_VALOR_COMPRA_ABRIO
+        parametros.valor_venta_abrio = parametros.PRELOAD_VALOR_VENTA_ABRIO
+        parametros.CARGAR_DATOS = False
 
 def obtener_texto_indicadores(elementos_indicadores):
     for elemento in elementos_indicadores:
@@ -30,8 +30,8 @@ def obtener_texto_indicadores(elementos_indicadores):
                 if not child_text_content: continue
                 texto_componente = child_text_content.replace(",", ".")
                 
-                texto_macd = ui_macd(parent_text_content, texto_componente, config.historico_macd, texto_macd)
-                texto_rsi = ui_rsi(parent_text_content, texto_componente, config.historico_rsi, texto_rsi)
+                texto_macd = ui_macd(parent_text_content, texto_componente, parametros.historico_macd, texto_macd)
+                texto_rsi = ui_rsi(parent_text_content, texto_componente, parametros.historico_rsi, texto_rsi)
                 texto_adx = ui_adx(parent_text_content, texto_componente, texto_adx)
                 texto_volumen = ui_volumen(parent_text_content, texto_componente, texto_volumen)
                 texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
@@ -50,38 +50,38 @@ def obtener_texto_indicadores(elementos_indicadores):
     return ""
 
 def actualizar_informacion():
-    config.valor_compra_abrio = config.valor_compra
-    config.valor_venta_abrio = config.valor_venta
+    parametros.valor_compra_abrio = parametros.valor_compra
+    parametros.valor_venta_abrio = parametros.valor_venta
 
     # Adicionar el valor de los indicadores
     try:
-        valor_numerico = float(config.valor_macd)
-        config.historico_macd.append(valor_numerico)
+        valor_numerico = float(parametros.valor_macd)
+        parametros.historico_macd.append(valor_numerico)
     except (ValueError, TypeError):
-        config.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {config.valor_macd}"
+        parametros.error = f"⚠️ No se pudo guardar: el valor del MACD no es numérico: {parametros.valor_macd}"
 
-    if len(config.historico_macd) > 3:
-        config.historico_macd.pop(0)
+    if len(parametros.historico_macd) > 3:
+        parametros.historico_macd.pop(0)
 
     try:
-        valor_numerico = float(config.valor_rsi)
-        config.historico_rsi.append(valor_numerico)
+        valor_numerico = float(parametros.valor_rsi)
+        parametros.historico_rsi.append(valor_numerico)
     except (ValueError, TypeError):
-        config.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {config.valor_rsi}"
+        parametros.error = f"⚠️ No se pudo guardar: el valor del RSI no es numérico: {parametros.valor_rsi}"
 
-    if len(config.historico_rsi) > 3:
-        config.historico_rsi.pop(0)
+    if len(parametros.historico_rsi) > 3:
+        parametros.historico_rsi.pop(0)
 
     try:
-        config.historico_volumen.append(config.ultimo_valor_volumen)
-        config.penultimo_segundo_procesado = 0
-        config.ultimo_valor_volumen = 0
-        if len(config.historico_volumen) > 6:
-            config.historico_volumen.pop(0)
-            config.promedio_volumen = sum(config.historico_volumen) / 6
-            config.promedio_volumen_sin_actual = sum(config.historico_volumen[-6:-1]) / 5
-        elif len(config.historico_volumen) > 0:
-            config.promedio_volumen = sum(config.historico_volumen) / len(config.historico_volumen)
-            config.promedio_volumen_sin_actual = sum(config.historico_volumen[:-1]) / len(config.historico_volumen[:-1]) if len(config.historico_volumen) > 1 else 0
+        parametros.historico_volumen.append(parametros.ultimo_valor_volumen)
+        parametros.penultimo_segundo_procesado = 0
+        parametros.ultimo_valor_volumen = 0
+        if len(parametros.historico_volumen) > 6:
+            parametros.historico_volumen.pop(0)
+            parametros.promedio_volumen = sum(parametros.historico_volumen) / 6
+            parametros.promedio_volumen_sin_actual = sum(parametros.historico_volumen[-6:-1]) / 5
+        elif len(parametros.historico_volumen) > 0:
+            parametros.promedio_volumen = sum(parametros.historico_volumen) / len(parametros.historico_volumen)
+            parametros.promedio_volumen_sin_actual = sum(parametros.historico_volumen[:-1]) / len(parametros.historico_volumen[:-1]) if len(parametros.historico_volumen) > 1 else 0
     except (ValueError, TypeError):
-        config.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {config.ultimo_valor_volumen}"
+        parametros.error = f"⚠️ No se pudo guardar: el valor del Volumen no es numérico: {parametros.ultimo_valor_volumen}"

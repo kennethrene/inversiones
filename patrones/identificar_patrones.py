@@ -1,5 +1,5 @@
 import pandas as pd
-import config.config as config
+import configuracion.parametros as parametros
 from . import patron_1_vela
 from . import patron_2_velas
 from . import patron_3_velas
@@ -10,16 +10,16 @@ def identificar_patrones(total_velas, valor_adx):
     global vela2_valor_abrio,vela2_valor_cerro,cuerpo1,vela1_valor_abrio,vela2_valor_cerro,es_verde1,es_roja1,tendencia_alcista,tendencia_bajista
     global nombre_patron,vela_actual,vela_previa,vela_antepenultima,hora_vela_actual,es_tendencia_bajista,macd_debil_bajista,macd_debil_alcista,picos_indices,suelos_indices
     
-    config.datos_graficos["hora_vela"] = None
-    config.datos_graficos["operacion"] = None
+    parametros.datos_graficos["hora_vela"] = None
+    parametros.datos_graficos["operacion"] = None
     
     num_velas_disponibles = total_velas
     if len(num_velas_disponibles) < 12:
-        config.datos_graficos["patron"] = None
+        parametros.datos_graficos["patron"] = None
         return "Sin historial de barras"
     
     if valor_adx is None:
-        config.datos_graficos["patron"] = None
+        parametros.datos_graficos["patron"] = None
         return "Faltan osciladores de apoyo en el DOM"
 
     # PARAMETROS GENERALES PARA IDENTIFICAR TODOS LOS PATRONES
@@ -46,14 +46,14 @@ def identificar_patrones(total_velas, valor_adx):
     nombre_patron = "Ninguno"
 
     # INDICADORES GENERALES DE VALIDACION
-    es_tendencia_bajista = len(config.historico_macd) > 1 and config.historico_macd[-1] < 0
-    macd_debil_alcista = len(config.historico_macd) > 1 and config.historico_macd[-1] < config.historico_macd[-2]
-    macd_debil_bajista = len(config.historico_macd) > 1 and config.historico_macd[-1] > config.historico_macd[-2]
+    es_tendencia_bajista = len(parametros.historico_macd) > 1 and parametros.historico_macd[-1] < 0
+    macd_debil_alcista = len(parametros.historico_macd) > 1 and parametros.historico_macd[-1] < parametros.historico_macd[-2]
+    macd_debil_bajista = len(parametros.historico_macd) > 1 and parametros.historico_macd[-1] > parametros.historico_macd[-2]
 
     picos_indices = []
     suelos_indices = []
 
-    if config.ENABLE_COMPLEX_CANDLES:
+    if parametros.ENABLE_COMPLEX_CANDLES:
         tendencia_alcista, tendencia_bajista, nombre_patron = patrones_complejos.analizar_patrones()
 
     if nombre_patron == "Ninguno":
@@ -66,30 +66,30 @@ def identificar_patrones(total_velas, valor_adx):
                 tendencia_alcista, tendencia_bajista, nombre_patron = patron_1_vela.analizar_patrones()
     
     # VALIDACIÓN FINAL
-    if valor_adx >= config.ADX_TENDENCIA_FUERTE and len(num_velas_disponibles) >= 12:
+    if valor_adx >= parametros.ADX_TENDENCIA_FUERTE and len(num_velas_disponibles) >= 12:
         if tendencia_alcista:
-            config.datos_graficos["hora_vela"] = hora_vela_actual
-            config.datos_graficos["operacion"] = "COMPRA"
-            config.datos_graficos["patron"] = nombre_patron
-            config.datos_graficos["log"] = f"\n ℹ️   Comprando - Patrón identificado: {nombre_patron}"
-            config.log_operacion = config.datos_graficos["log"]
-            config.datos_graficos["log"] = ""
+            parametros.datos_graficos["hora_vela"] = hora_vela_actual
+            parametros.datos_graficos["operacion"] = "COMPRA"
+            parametros.datos_graficos["patron"] = nombre_patron
+            parametros.datos_graficos["log"] = f"\n ℹ️   Comprando - Patrón identificado: {nombre_patron}"
+            parametros.log_operacion = parametros.datos_graficos["log"]
+            parametros.datos_graficos["log"] = ""
             return f"COMPRA_{nombre_patron}"
         elif tendencia_bajista:
-            config.datos_graficos["hora_vela"] = hora_vela_actual
-            config.datos_graficos["operacion"] = "VENTA"
-            config.datos_graficos["patron"] = nombre_patron
-            config.datos_graficos["log"] = f"\n ℹ️   Vendiendo - Patrón identificado: {nombre_patron}"
-            config.log_operacion = config.datos_graficos["log"]
-            config.datos_graficos["log"] = ""
+            parametros.datos_graficos["hora_vela"] = hora_vela_actual
+            parametros.datos_graficos["operacion"] = "VENTA"
+            parametros.datos_graficos["patron"] = nombre_patron
+            parametros.datos_graficos["log"] = f"\n ℹ️   Vendiendo - Patrón identificado: {nombre_patron}"
+            parametros.log_operacion = parametros.datos_graficos["log"]
+            parametros.datos_graficos["log"] = ""
             return f"VENTA_{nombre_patron}"
     
     if nombre_patron != "Ninguno":
-        if config.valor_adx >= config.ADX_TENDENCIA_FUERTE:
-            config.datos_graficos["log"] = f"\n ❌  {nombre_patron} identifido pero ADX débil {config.valor_adx} - Requerido: {config.ADX_TENDENCIA_FUERTE}"
+        if parametros.valor_adx >= parametros.ADX_TENDENCIA_FUERTE:
+            parametros.datos_graficos["log"] = f"\n ❌  {nombre_patron} identifido pero ADX débil {parametros.valor_adx} - Requerido: {parametros.ADX_TENDENCIA_FUERTE}"
     else:
-        config.datos_graficos["patron"] = "Ninguno"
+        parametros.datos_graficos["patron"] = "Ninguno"
 
-    config.ultimo_patron = nombre_patron
+    parametros.ultimo_patron = nombre_patron
 
     return "Analizando la acción del precio"

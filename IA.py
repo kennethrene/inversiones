@@ -1,11 +1,12 @@
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
-from extraction.candles import extraer_velas_para_IA
+from extraccion.velas import extraer_velas_para_IA
 import json
-import config.config as config
+import configuracion.parametros as parametros
 from typing import Literal
-import config.secrets as secrets
+import configuracion.secrets as secrets
+from tvDatafeed import Interval
 
 class AnalisisPatron(BaseModel):
     decision_accion: Literal["Comprar", "Vender", "Mantener"] = Field(
@@ -44,7 +45,7 @@ class AnalisisPatron(BaseModel):
 client = genai.Client(api_key=secrets.GOOGLE_IA)
 
 def ejecutar_operacion():
-    velas = extraer_velas_para_IA(config.activo_actual)
+    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute)
     datos_en_texto = json.dumps(velas)
 
     if velas != None and len(velas)> 0 :
@@ -75,8 +76,8 @@ def ejecutar_operacion():
         take_profit = resultado["take_profit"]
         stop_loss = resultado["stop_loss"]
         trailing_stop = resultado["trailing_stop_activation"]
-        valor_entrada = resultado["valor_entrada"]
+        valor_entrada = resultado["precio_entrada"]
 
         return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada
     else:
-        config.error = "No hay datos para analizar"
+        parametros.error = "No hay datos para analizar"

@@ -1,8 +1,9 @@
 import re
 import pandas as pd
 from selenium.webdriver.common.by import By
-from extraction.candles import extraer_velas
-import config.config as config
+from extraccion.velas import extraer_velas
+import configuracion.parametros as parametros
+from ui.grafico import extraer_datos_velas
 
 # ===========================================================================
 # EXTRACCIÓN DE DATOS FILTRADOS POR COLUMNA DESDE EL DOM
@@ -19,31 +20,31 @@ def extraer_datos_operacion(lista_cruda):
     filtrados = [str(d).replace('\xa0', ' ').strip() for d in lista_cruda if str(d).strip()]
    
     if len(filtrados) >= 2:
-        config.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
-        config.datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
+        parametros.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
+        parametros.datos_mapeados["Tipo"] = filtrados[1]    # Cambiado para tomar solo 'CFD'
         
     for i in range(len(filtrados) - 1):
         texto_actual = filtrados[i].lower()
         siguiente_texto = filtrados[i+1]
         
         if "volumen" == texto_actual:
-            config.datos_mapeados["Volumen"] = siguiente_texto
+            parametros.datos_mapeados["Volumen"] = siguiente_texto
         elif "valor del contrato" in texto_actual:
-            config.datos_mapeados["Valor Contrato"] = siguiente_texto
+            parametros.datos_mapeados["Valor Contrato"] = siguiente_texto
         elif "precio actual" in texto_actual:
-            config.datos_mapeados["Precio Actual"] = siguiente_texto
+            parametros.datos_mapeados["Precio Actual"] = siguiente_texto
         elif "precio medio de apertura" in texto_actual:
-            config.datos_mapeados["Precio Apertura"] = siguiente_texto
+            parametros.datos_mapeados["Precio Apertura"] = siguiente_texto
         elif "beneficio neto %" in texto_actual:
-            config.datos_mapeados["Beneficio %"] = siguiente_texto
+            parametros.datos_mapeados["Beneficio %"] = siguiente_texto
         elif "beneficio neto" == texto_actual:
-            config.datos_mapeados["Beneficio Neto"] = siguiente_texto
+            parametros.datos_mapeados["Beneficio Neto"] = siguiente_texto
             
     # BÚSQUEDA EXHAUSTIVA DE RESPALDO SI EL MAPEO INDEPENDIENTE SE CORRE
-    if config.datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(config.datos_mapeados["Beneficio %"]):
+    if parametros.datos_mapeados["Beneficio %"] == "N/D" or "%" not in str(parametros.datos_mapeados["Beneficio %"]):
         for elemento in filtrados:
             if "%" in elemento and ("-" in elemento or re.search(r'\d', elemento)):
-                config.datos_mapeados["Beneficio %"] = elemento
+                parametros.datos_mapeados["Beneficio %"] = elemento
                 break
 
 
@@ -94,23 +95,23 @@ def obtener_datos_compra_venta(segundo_actual, con_grafico, driver):
     
     for boton in botones_vender:
         if boton.is_displayed() and boton.is_enabled():
-            if (segundo_actual != config.ultimo_segundo_procesado):
-                config.ultimo_valor_venta = config.valor_venta
-            config.valor_venta = boton.get_attribute("textContent").strip()
-            config.boton_vender = boton
+            if (segundo_actual != parametros.ultimo_segundo_procesado):
+                parametros.ultimo_valor_venta = parametros.valor_venta
+            parametros.valor_venta = boton.get_attribute("textContent").strip()
+            parametros.boton_vender = boton
             break
     for boton in botones_comprar:
         if boton.is_displayed() and boton.is_enabled():
-            if (segundo_actual != config.ultimo_segundo_procesado):
-                config.ultimo_valor_compra = config.valor_compra
-            config.valor_compra = boton.get_attribute("textContent").strip()
-            config.boton_comprar = boton
+            if (segundo_actual != parametros.ultimo_segundo_procesado):
+                parametros.ultimo_valor_compra = parametros.valor_compra
+            parametros.valor_compra = boton.get_attribute("textContent").strip()
+            parametros.boton_comprar = boton
             break
     for vol in botones_lote:
         if vol.is_displayed():
             texto_vol = vol.get_attribute("value") if vol.tag_name == "input" else vol.get_attribute("textContent").strip()
             if texto_vol:
-                config.valor_lote = texto_vol.replace("USD", "").strip()
+                parametros.valor_lote = texto_vol.replace("USD", "").strip()
                 break
     for activo in activos:
         if activo.is_displayed():
@@ -119,20 +120,13 @@ def obtener_datos_compra_venta(segundo_actual, con_grafico, driver):
                 activo_detectado = texto_bruto.replace("CFD", "").strip()
                 break
     
-    if activo_detectado != config.activo_actual:
-        config.activo_actual = activo_detectado
-        config.promedio_volumen = 0
-        config.promedio_volumen_sin_actual = 0.0
-        config.historico_macd = []
-        config.historico_rsi = []
-        config.historico_volumen = []
+    if activo_detectado != parametros.activo_actual:
+        parametros.activo_actual = activo_detectado
+        parametros.promedio_volumen = 0
+        parametros.promedio_volumen_sin_actual = 0.0
+        parametros.historico_macd = []
+        parametros.historico_rsi = []
+        parametros.historico_volumen = []
 
         if con_grafico:
             extraer_datos_velas()
-
-def extraer_datos_velas():
-    config.lista_velas_acumuladas = extraer_velas()
-    config.historico_velas = pd.DataFrame(config.lista_velas_acumuladas)
-    config.datos_graficos["datos_velas"] = config.historico_velas
-    config.historico_velas.index = pd.date_range(start="2026-01-01 09:30", periods=len(config.historico_velas), freq=f"{config.TEMPORALIDAD_MINUTOS}min")
-    config.datos_graficos["datos_velas"] = config.historico_velas

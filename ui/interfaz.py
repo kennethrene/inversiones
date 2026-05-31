@@ -1,7 +1,7 @@
 import re
 import os
 import time
-import config.config as config
+import configuracion.parametros as parametros
 
 texto_separador = "-" * 75
 comando_limpiar = 'cls' if os.name == 'nt' else 'clear'
@@ -16,7 +16,7 @@ def ui_macd(parent_text_content, texto_componente, historico, texto_macd_actual)
             valor_venta = float(decimales_macd[1])
             valor = valor_compra - valor_venta
             tendencia = "🔴 A LA BAJA" if valor < 0 else "🟢 AL ALZA"
-            config.valor_macd = f"{valor:.2f}"
+            parametros.valor_macd = f"{valor:.2f}"
             if valor > 0:
                 fuerza = "🔴 Tendencia Alcista Debilitándose" if len(historico) > 1 and historico[-1] < historico[-2] else  "🟢 Tendencia Alcista Fortaleciéndose"
             else:
@@ -28,7 +28,7 @@ def ui_macd(parent_text_content, texto_componente, historico, texto_macd_actual)
                 f"  ───────────────────────────────────\n"
                 #f"   Línea venta  : {valor_venta}\n"
                 #f"   Línea compra : {valor_compra}\n"
-                f"   Diferencia   : {config.valor_macd}\n"
+                f"   Diferencia   : {parametros.valor_macd}\n"
                 f"   Tendencia    : {tendencia}\n"
                 f"   Histórico    : {historico}\n"
                 f"   Fuerza       : {fuerza}"
@@ -45,22 +45,22 @@ def ui_bollinger(parent_text_content, texto_componente, texto_bollinger_actual):
             if len(valores_bollinger) == 0:
                valores_bollinger = partes_bollinger
 
-            config.valor_bollinger_superior = float(valores_bollinger[0])
-            config.valor_bollinger_media = float(valores_bollinger[1])
-            config.valor_bollinger_inferior = float(valores_bollinger[2])
+            parametros.valor_bollinger_superior = float(valores_bollinger[0])
+            parametros.valor_bollinger_media = float(valores_bollinger[1])
+            parametros.valor_bollinger_inferior = float(valores_bollinger[2])
 
-            porcentaje_bollinger_estrecho = 100 * (float(config.valor_bollinger_superior) - float(config.valor_bollinger_inferior)) / float(config.valor_bollinger_media)
+            porcentaje_bollinger_estrecho = 100 * (float(parametros.valor_bollinger_superior) - float(parametros.valor_bollinger_inferior)) / float(parametros.valor_bollinger_media)
             texto_estrecho = ""
-            if float(porcentaje_bollinger_estrecho) < float(config.porcentaje_bollinger_estrecho[config.activo_actual]):
-                texto_estrecho = f"🚧 Bandas de Bollinger estrechas -  {porcentaje_bollinger_estrecho:.2f} < {config.porcentaje_bollinger_estrecho[config.activo_actual]}\n" 
+            if float(porcentaje_bollinger_estrecho) < float(parametros.porcentaje_bollinger_estrecho[parametros.activo_actual]):
+                texto_estrecho = f"🚧 Bandas de Bollinger estrechas -  {porcentaje_bollinger_estrecho:.2f} < {parametros.porcentaje_bollinger_estrecho[parametros.activo_actual]}\n" 
 
             return (
                 f"{texto_separador}\n"
                 f" 🧬 BANDAS DE BOLLINGER\n"
                 f"  ───────────────────────────────────\n"
-                f"   Banda superior : {config.valor_bollinger_superior}\n"
-                f"   Banda media    : {config.valor_bollinger_media}\n"
-                f"   Banda inferior : {config.valor_bollinger_inferior}\n"
+                f"   Banda superior : {parametros.valor_bollinger_superior}\n"
+                f"   Banda media    : {parametros.valor_bollinger_media}\n"
+                f"   Banda inferior : {parametros.valor_bollinger_inferior}\n"
                 f"                    {texto_estrecho}"
             )
 
@@ -70,11 +70,11 @@ def ui_rsi(parent_text_content, texto_componente, historico, texto_rsi_actual):
     if indicador_habilitado("RSI") and "RSI" in parent_text_content:
         decimales_rsi = re.findall(r'-?\d+\.\d+|-?\d+', texto_componente)
         if decimales_rsi:
-            config.ultimo_valor_rsi = config.valor_rsi
-            config.valor_rsi = float(decimales_rsi[-1])
-            if float(config.valor_rsi) >= config.RSI_SOBRECOMPRA: valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
-            elif float(config.valor_rsi) <= config.RSI_SOBREVENTA: valor_rsi = f"{config.valor_rsi:.2f} ⚠️"
-            else: valor_rsi = f"{config.valor_rsi:.2f}"            
+            parametros.ultimo_valor_rsi = parametros.valor_rsi
+            parametros.valor_rsi = float(decimales_rsi[-1])
+            if float(parametros.valor_rsi) >= parametros.RSI_SOBRECOMPRA: valor_rsi = f"{parametros.valor_rsi:.2f} ⚠️"
+            elif float(parametros.valor_rsi) <= parametros.RSI_SOBREVENTA: valor_rsi = f"{parametros.valor_rsi:.2f} ⚠️"
+            else: valor_rsi = f"{parametros.valor_rsi:.2f}"            
 
             return (
                 f"{texto_separador}\n"
@@ -90,18 +90,18 @@ def ui_adx(parent_text_content, texto_componente, texto_adx_actual):
     if "ADX" in parent_text_content:
         decimales_adx = re.findall(r'-?\d+\.\d+|-?\d+', texto_componente)
         if decimales_adx:
-            config.valor_adx = float(decimales_adx[0])
-            config.valor_adx_compra = float(decimales_adx[1])
-            config.valor_adx_venta = float(decimales_adx[2])
+            parametros.valor_adx = float(decimales_adx[0])
+            parametros.valor_adx_compra = float(decimales_adx[1])
+            parametros.valor_adx_venta = float(decimales_adx[2])
 
-            tendencia = "🔴 A LA BAJA" if config.valor_adx_compra < config.valor_adx_venta else "🟢 AL ALZA"
+            tendencia = "🔴 A LA BAJA" if parametros.valor_adx_compra < parametros.valor_adx_venta else "🟢 AL ALZA"
 
-            if config.valor_adx >= config.ADX_TENDENCIA_FUERTE: 
+            if parametros.valor_adx >= parametros.ADX_TENDENCIA_FUERTE: 
                 return (
                     f"{texto_separador}\n"
                     f" 🔋 ADX\n"
                     f"  ───────────────────────────────────\n"
-                    f" 📊 IMPULSO ADX : {config.valor_adx:.2f} 🔥 (Tendencia Fuerte)\n"
+                    f" 📊 IMPULSO ADX : {parametros.valor_adx:.2f} 🔥 (Tendencia Fuerte)\n"
                     f"\n"
                     f" 📈 TENDENCIA GENERAL : {tendencia}\n"
                 )
@@ -109,7 +109,7 @@ def ui_adx(parent_text_content, texto_componente, texto_adx_actual):
                 return (
                     f" 🔋 ADX\n"
                     f"  ───────────────────────────────────\n"
-                    f" 📊 IMPULSO ADX : {config.valor_adx:.2f} 💤 (Mercado Lateral)\n"
+                    f" 📊 IMPULSO ADX : {parametros.valor_adx:.2f} 💤 (Mercado Lateral)\n"
                     f"\n"
                     f" 📈 TENDENCIA GENERAL : {tendencia}\n"
                 )
@@ -119,16 +119,16 @@ def ui_adx(parent_text_content, texto_componente, texto_adx_actual):
 def ui_volumen(parent_text_content, texto_componente, texto_volumen_actual):
     if "VOL" in parent_text_content:
         if texto_componente != "n/a":
-            config.valor_volumen = int(texto_componente)
+            parametros.valor_volumen = int(texto_componente)
             return (
                 f"{texto_separador}\n"
                 f" 🔋 VOLUMEN\n"
                 f"  ───────────────────────────────────\n"
-                f"    Actual                   : {config.valor_volumen}\n"
-                f"    Ultimo                   : {config.ultimo_valor_volumen}\n"
-                f"    Histórico                : {config.historico_volumen}\n"
-                f"    Promedio                 : {config.promedio_volumen:.2f}\n"
-                f"    Promedio sin el actual   : {config.promedio_volumen_sin_actual:.2f}"
+                f"    Actual                   : {parametros.valor_volumen}\n"
+                f"    Ultimo                   : {parametros.ultimo_valor_volumen}\n"
+                f"    Histórico                : {parametros.historico_volumen}\n"
+                f"    Promedio                 : {parametros.promedio_volumen:.2f}\n"
+                f"    Promedio sin el actual   : {parametros.promedio_volumen_sin_actual:.2f}"
             )
     
     return texto_volumen_actual
@@ -138,20 +138,20 @@ def ui_ema(parent_text_content, texto_componente, texto_ema_actual):
         if "EMA [35" in parent_text_content:
             decimales_ema = re.findall(r'-?\d+\.\d+|-?\d+', texto_componente)
             if decimales_ema:
-                config.valor_ema_35 = float(decimales_ema[0])
+                parametros.valor_ema_35 = float(decimales_ema[0])
         
         if "EMA [50" in parent_text_content:
             decimales_ema = re.findall(r'-?\d+\.\d+|-?\d+', texto_componente)
             if decimales_ema:
-                config.valor_ema_50 = float(decimales_ema[0])
+                parametros.valor_ema_50 = float(decimales_ema[0])
 
-        if config.valor_ema_35 != None and config.valor_ema_50 != None:
+        if parametros.valor_ema_35 != None and parametros.valor_ema_50 != None:
             return (
                 f"{texto_separador}\n"
                 f" 🔋 EMA\n"
                 f"  ───────────────────────────────────\n"
-                f" ⚡ EMA 35 : {config.valor_ema_35:.2f}\n"
-                f" 🐢 EMA 50 : {config.valor_ema_50:.2f}\n"
+                f" ⚡ EMA 35 : {parametros.valor_ema_35:.2f}\n"
+                f" 🐢 EMA 50 : {parametros.valor_ema_50:.2f}\n"
             )
 
     return texto_ema_actual
@@ -165,17 +165,17 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
             f"    Inactivo (Sin operaciones en ejecución)\n"
         )
     
-    if not config.USAR_IA:
+    if not parametros.USAR_IA:
         if activo:
             return (
                 f"{texto_separador}\n"
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   🔥 Activado\n"
-                f"   🔥 Máximo rendimiento alcanzado : +{config.maximo_rendimiento_alcanzado:.2f}%\n"
+                f"   🔥 Máximo rendimiento alcanzado : +{parametros.maximo_rendimiento_alcanzado:.2f}%\n"
                 f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
-                f"   🔥 % Activación de trailing     : {config.TRAILING_STOP}%\n"
-                f"   🔥 % Trailing stop              : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
+                f"   🔥 % Activación de trailing     : {parametros.TRAILING_STOP}%\n"
+                f"   🔥 % Trailing stop              : {parametros.DISTANCIA_TRAILING_MAXIMA}%\n"
             )
         else:
             return (
@@ -183,8 +183,8 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   💤 Inactivo\n"
-                f"   % Actual    : {config.rendimiento_actual:+.2f}%\n"
-                f"   % Requerido : {config.TRAILING_STOP}%\n"
+                f"   % Actual    : {parametros.rendimiento_actual:+.2f}%\n"
+                f"   % Requerido : {parametros.TRAILING_STOP}%\n"
             )
     else:
         return (
@@ -192,10 +192,10 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   🔥 Activado\n"
-                f"   🔥 Trailing Stop     : {config.TRAILING_STOP}%\n"
-                f"   🔥 Distancia Máxima  : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
-                f"   🔥 Stop Loss inicial : {config.STOP_LOSS_INICIAL_TRAILING}%\n"
-                f"   🔥 Stop Loss actual  : {config.STOP_LOSS}%\n"
+                f"   🔥 Trailing Stop     : {parametros.TRAILING_STOP}%\n"
+                f"   🔥 Distancia Máxima  : {parametros.DISTANCIA_TRAILING_MAXIMA}%\n"
+                f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING}%\n"
+                f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS}%\n"
             )
 
 def ui_stop_loss(activo):
@@ -207,71 +207,71 @@ def ui_stop_loss(activo):
             f"   🔴 FIJADO: --\n"
             f"   🔴 ACTUAL: --\n"
         )
-    elif not config.USAR_IA:
+    elif not parametros.USAR_IA:
         return (
             f"{texto_separador}\n"
             f" 🧭 STOP LOSS ACTUAL\n"
             f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
-            f"   🔴 ACTUAL: {config.rendimiento_actual:+.2f}%\n"
+            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}%\n"
+            f"   🔴 ACTUAL: {parametros.rendimiento_actual:+.2f}%\n"
         )
-    elif config.USAR_IA:
+    elif parametros.USAR_IA:
         return (
             f"{texto_separador}\n"
             f" 🧭 STOP LOSS ACTUAL\n"
             f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
+            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}%\n"
         )
 
 def ui_operacion_activa(activo):
     if activo:
-        icono_beneficio = "🟢" if config.rendimiento_actual >= 0 else "🔴"
+        icono_beneficio = "🟢" if parametros.rendimiento_actual >= 0 else "🔴"
 
         return (
             f"{texto_separador}\n"
             f"📌 [OPERACION]\n"
             f"  ───────────────────────────────────\n"
-            f"   Operación          : {config.datos_mapeados["Operacion"]}\n"
-            f"   💱 Instrumento     : {config.datos_mapeados['Activo']} ({config.datos_mapeados['Tipo']})\n"
-            f"   📦 Volumen (Lotes) : {config.datos_mapeados['Volumen']}\n"
-            f"   🚀 Precio Apertura : {config.datos_mapeados['Precio Apertura']}\n"
-            f"   📊 Precio Actual   : {config.datos_mapeados['Precio Actual']}\n"
-            f"   {icono_beneficio} Beneficio Neto  : {config.datos_mapeados['Beneficio Neto']} ({config.datos_mapeados['Beneficio %']})\n\n"
+            f"   Operación          : {parametros.datos_mapeados["Operacion"]}\n"
+            f"   💱 Instrumento     : {parametros.datos_mapeados['Activo']} ({parametros.datos_mapeados['Tipo']})\n"
+            f"   📦 Volumen (Lotes) : {parametros.datos_mapeados['Volumen']}\n"
+            f"   🚀 Precio Apertura : {parametros.datos_mapeados['Precio Apertura']}\n"
+            f"   📊 Precio Actual   : {parametros.datos_mapeados['Precio Actual']}\n"
+            f"   {icono_beneficio} Beneficio Neto  : {parametros.datos_mapeados['Beneficio Neto']} ({parametros.datos_mapeados['Beneficio %']})\n\n"
             f"   Log operación\n"
             f"  ───────────────────────────────────\n"
-            f"   {config.log_operacion}\n"
+            f"   {parametros.log_operacion}\n"
         )
     else:
         return (
             f"{texto_separador}\n"
             f"📌 SIN OPERACIONES ACTIVAS\n"
             f"  ───────────────────────────────────\n"
-            f"   {config.log_operacion}"
+            f"   {parametros.log_operacion}"
         )
 
 def ui_estadisticas(motivo_cierre):
-    win_rate = (config.estadisticas_bot["ganadas"] / config.estadisticas_bot["total_ordenes"] * 100) if config.estadisticas_bot["total_ordenes"] > 0 else 0.0
+    win_rate = (parametros.estadisticas_bot["ganadas"] / parametros.estadisticas_bot["total_ordenes"] * 100) if parametros.estadisticas_bot["total_ordenes"] > 0 else 0.0
 
     return (
         f"{texto_separador}\n"
         " 📊 CUADRO DE ESTADISTICAS Y METRICAS DE EFECTIVIDAD (HOY):\n"
-        f"    └ Operaciones Ganadas  🟢 : {config.estadisticas_bot['ganadas']}\n"
-        f"    └ Operaciones Perdidas 🔴 : {config.estadisticas_bot['perdidas']}\n"
-        f"    └ Total Ejecutadas     ⚡ : {config.estadisticas_bot['total_ordenes']}\n"
+        f"    └ Operaciones Ganadas  🟢 : {parametros.estadisticas_bot['ganadas']}\n"
+        f"    └ Operaciones Perdidas 🔴 : {parametros.estadisticas_bot['perdidas']}\n"
+        f"    └ Total Ejecutadas     ⚡ : {parametros.estadisticas_bot['total_ordenes']}\n"
         f"    └ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate\n"
-        f"    └ Histórico de la cuenta  : {config.historico_cuenta}\n"
+        f"    └ Histórico de la cuenta  : {parametros.historico_cuenta}\n"
         f"    └ Ultimo cierre           : {motivo_cierre}\n"
     )
 
 def ui_datos_generales():
     return (
         f"{texto_separador}\n"
-        f" 🏷️  ACTIVO              : {config.activo_actual}\n"
-        f" 🔴 PRECIO ASK (VENTA)  : {config.valor_venta}\n"
-        f" 🟢 PRECIO BID (COMPRA) : {config.valor_compra}\n"
-        f" 🔢 LOTE                : {config.valor_lote}\n"
-        f" 🟢 VALOR COMPRA ABRE   : {config.valor_compra_abrio}\n"
-        f" 🔴 VALOR VENTA ABRE    : {config.valor_venta_abrio}\n"
+        f" 🏷️  ACTIVO              : {parametros.activo_actual}\n"
+        f" 🔴 PRECIO ASK (VENTA)  : {parametros.valor_venta}\n"
+        f" 🟢 PRECIO BID (COMPRA) : {parametros.valor_compra}\n"
+        f" 🔢 LOTE                : {parametros.valor_lote}\n"
+        f" 🟢 VALOR COMPRA ABRE   : {parametros.valor_compra_abrio}\n"
+        f" 🔴 VALOR VENTA ABRE    : {parametros.valor_venta_abrio}\n"
     )
 
 def ui_patrones():
@@ -279,25 +279,25 @@ def ui_patrones():
         f"{texto_separador}\n"
         f" 📌 [PATRONES]\n"
         f"  ───────────────────────────────────\n"
-        f" 🏷️  PATRON IDENTIFICADO     : {config.datos_graficos['patron']}\n"
-        f" 🟢 ULTIMO PATRON DETECTADO : {config.ultimo_patron}\n\n"
+        f" 🏷️  PATRON IDENTIFICADO     : {parametros.datos_graficos['patron']}\n"
+        f" 🟢 ULTIMO PATRON DETECTADO : {parametros.ultimo_patron}\n\n"
         f"   Log operación\n"
         f"  ───────────────────────────────────"
-        f"   {config.datos_graficos["log"]}"
+        f"   {parametros.datos_graficos["log"]}"
     )
 
 def indicador_habilitado(indicador):
-    if config.USAR_IA:
+    if parametros.USAR_IA:
         return False
 
     num_criterio = 0
 
-    for criterio in config.CRITERIO_INDICADORES:
+    for criterio in parametros.CRITERIO_INDICADORES:
         if num_criterio == 0:
             num_criterio += 1
             continue
 
-        criterio_general_activo = getattr(config, f"CRITERIO{num_criterio}", False)
+        criterio_general_activo = getattr(parametros, f"CRITERIO{num_criterio}", False)
         if criterio_general_activo and criterio.get(indicador.upper(), False):
             return True
         
@@ -317,10 +317,10 @@ def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, text
     print(f"{texto_trailing}")
     print(f"{texto_stop_loss}")
     print("-" * 75)
-    print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT}")
+    print(f" 💰 TAKE PROFIT : {parametros.TAKE_PROFIT}")
     print("-" * 75)
     print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
     print(f"{ui_estadisticas(motivo_cierre)}")
     print("=" * 75)
-    print(f" 🔴 Ultimo error              : {config.error}")
+    print(f" 🔴 Ultimo error              : {parametros.error}")
     print("=" * 75)

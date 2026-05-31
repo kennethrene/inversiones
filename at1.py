@@ -2,14 +2,18 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import traceback
+import threading
+import matplotlib.pyplot as plt
 import time
 import os
-import config.config as config
+import configuracion.parametros as parametros
 from operaciones.ejecucion import ejecutar_operacion, validar_trailing_stop
 from ui.interfaz import ui_trailing, ui_stop_loss, ui_operacion_activa, ui_general
-from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
+from extraccion.datos_xtb import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 from operaciones.cierre import operacion_debe_cerrar, ejecutar_cierre
 from indicadores.informacion import obtener_texto_indicadores, actualizar_informacion, precargar_datos
+from ui.grafico import loop_render_grafico, extraer_datos_velas
+from matplotlib.animation import FuncAnimation
 
 minuto_anterior = ""
 motivo_cierre = "N/D"
@@ -33,9 +37,9 @@ def inicializar():
 
     comando_limpiar = 'cls' if os.name == 'nt' else 'clear'
 
-    config.bloqueo_ejecutar_orden = False
+    parametros.bloqueo_ejecutar_orden = False
     minuto_anterior = ""
-    config.minuto_ultima_orden = ""
+    parametros.minuto_ultima_orden = ""
     motivo_cierre = "N/D"
 
     os.system(comando_limpiar)
@@ -54,8 +58,8 @@ def bot_scalping():
 
         while True:
             try:
-                if config.minuto_ultima_orden != time.strftime('%M'):
-                    config.bloqueo_ejecutar_orden = False
+                if parametros.minuto_ultima_orden != time.strftime('%M'):
+                    parametros.bloqueo_ejecutar_orden = False
                 
                 minuto_actual = time.strftime('%M')                
                 if minuto_anterior == "": minuto_anterior = minuto_actual
@@ -65,21 +69,21 @@ def bot_scalping():
 
                 precargar_datos()
 
-                if segundo_actual != config.ultimo_segundo_procesado:
-                    config.ultimo_segundo_procesado = segundo_actual
+                if segundo_actual != parametros.ultimo_segundo_procesado:
+                    parametros.ultimo_segundo_procesado = segundo_actual
 
                 segundo_hace_dos_segs = time.time() - 2
-                if segundo_hace_dos_segs >= config.penultimo_segundo_procesado:
-                    config.ultimo_valor_volumen = config.valor_volumen
-                    config.penultimo_segundo_procesado = segundo_hace_dos_segs
+                if segundo_hace_dos_segs >= parametros.penultimo_segundo_procesado:
+                    parametros.ultimo_valor_volumen = parametros.valor_volumen
+                    parametros.penultimo_segundo_procesado = segundo_hace_dos_segs
 
                 # Escaneo de los indicadores técnicos
                 xpath_indicadores = "//*[contains(@class, 'indicator-value-label')]"
                 elementos_indicadores = driver.find_elements(By.XPATH, xpath_indicadores)
                 texto_indicadores = obtener_texto_indicadores(elementos_indicadores)
 
-                if config.minuto_ultima_orden != time.strftime('%M'):
-                    config.bloqueo_ejecutar_orden = False
+                if parametros.minuto_ultima_orden != time.strftime('%M'):
+                    parametros.bloqueo_ejecutar_orden = False
 
                 # Obtener los datos de las operaciones actuales
                 js_script_shadow = obtener_datos_operaciones()                
@@ -90,13 +94,13 @@ def bot_scalping():
                 operacion_activa = total_posiciones > 0
                 ejecutar_cierre_operacion = False
                 
-                texto_trailing = ui_trailing(False, False, None, None)
-                texto_stop_loss = ui_stop_loss(False, None)
+                texto_trailing = ui_trailing(False, False, None)
+                texto_stop_loss = ui_stop_loss(False)
 
                 if operacion_activa and len(operaciones_detalles) > 0:
-                    if config.hora_apertura_orden is None:
-                        config.hora_apertura_orden = time.time()
-                        config.maximo_rendimiento_alcanzado = -999.0
+                    if parametros.hora_apertura_orden is None:
+                        parametros.hora_apertura_orden = time.time()
+                        parametros.maximo_rendimiento_alcanzado = -999.0
                     
                     extraer_datos_operacion(operaciones_detalles)
                    
@@ -106,21 +110,24 @@ def bot_scalping():
 
                     ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
                 else:
-                    texto_operacion_activa = ui_operacion_activa(False, None)
-                    config.hora_apertura_orden = None
+                    texto_operacion_activa = ui_operacion_activa(False)
+                    parametros.hora_apertura_orden = None
 
                 # Actualizar informacion de indicadores
-                if int(minuto_actual) % config.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
-                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
+                if int(minuto_actual) % parametros.TEMPORALIDAD_MINUTOS == 0 and minuto_actual != minuto_anterior:
+                    if time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue
+
+                    if parametros.MOSTRAR_GRAFICO:
+                        extraer_datos_velas()
 
                     minuto_anterior = minuto_actual
                     actualizar_informacion()
 
                 # Ejecución automática de operaciones
-                if not config.bloqueo_ejecutar_orden and not operacion_activa:
+                if not parametros.bloqueo_ejecutar_orden and not operacion_activa:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if time.time() - config.TIEMPO_ULTIMO_CIERRE < config.SEGUNDOS_ENFRIAMIENTO:
+                    if time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
                     # Validar y abrir posicion en caso que se cumplan las condiciones
@@ -130,19 +137,35 @@ def bot_scalping():
                 if ejecutar_cierre_operacion and operacion_activa:
                    ejecutar_cierre(driver, motivo_cierre)
 
-                # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
+                # Impresión de la UI en la consola
                 ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre)
                         
             except Exception as e_bucle:
-                config.error = traceback.format_exc()
+                parametros.error = traceback.format_exc()
                 time.sleep(0.1)
             
     except Exception as e:
-        config.error = traceback.format_exc()
+        parametros.error = traceback.format_exc()
+
+def iniciar_renderizado_grafico_mac():
+    # Inicialización de la figura y el eje nativo
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Lanzar subproceso del bot de forma segura y paralela
+    hilo_grabador = threading.Thread(target=bot_scalping)
+    hilo_grabador.daemon = True
+    hilo_grabador.start()
+    
+    # Animación automática nativa que maneja el refresco asíncrono
+    ani = FuncAnimation(fig, loop_render_grafico, fargs=(fig, ax), interval=1000, cache_frame_data=False)
+    plt.show()
 
 if __name__ == "__main__":
     try:
-        bot_scalping()
+        if not parametros.MOSTRAR_GRAFICO:
+            bot_scalping()
+        else:
+            iniciar_renderizado_grafico_mac()
     except KeyboardInterrupt:
         print("\n\nSistema apagado de forma segura")
 

@@ -1,5 +1,8 @@
 import pandas as pd
 
+MOSTRAR_GRAFICO = True
+DEBUG = True # En True no realiza ninguna operación ... solo se conecta y muestra valores
+
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
@@ -15,7 +18,7 @@ PRELOAD_VALOR_VENTA_ABRIO = 0
 # ===========================================================================
 # ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
 # ===========================================================================
-TEMPORALIDAD_MINUTOS = 5    # Intervalo de corte de la vela (ej: 1, 5, 15)
+TEMPORALIDAD_MINUTOS = 1    # Intervalo de corte de la vela (ej: 1, 5, 15)
 RSI_SOBRECOMPRA = 80.0      # Nivel estricto de sobrecompra para ventas
 RSI_SOBREVENTA = 15.0       # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd

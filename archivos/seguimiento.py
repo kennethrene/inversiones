@@ -1,15 +1,15 @@
 import csv
 import os
 import time
-import config.config as config
+import configuracion.parametros as parametros
 import traceback
 
 def actualizar_estadisticas_cierre(ganada=False):
     """Registra una operación ejecutada y actualiza si fue ganada o perdida."""
     global estadisticas_bot
-    config.estadisticas_bot["total_ordenes"] += 1
-    if ganada: config.estadisticas_bot["ganadas"] += 1
-    else: config.estadisticas_bot["perdidas"] += 1
+    parametros.estadisticas_bot["total_ordenes"] += 1
+    if ganada: parametros.estadisticas_bot["ganadas"] += 1
+    else: parametros.estadisticas_bot["perdidas"] += 1
 
 def guardar_estadistica(evento):
     """
@@ -38,31 +38,31 @@ def guardar_estadistica(evento):
                 
             # Escribimos los datos de la operación actual
             nombre_patron = ""
-            if config.datos_graficos['patron'] != "Ninguno":
-                nombre_patron = config.datos_graficos['patron']
+            if parametros.datos_graficos['patron'] != "Ninguno":
+                nombre_patron = parametros.datos_graficos['patron']
 
             escritor.writerow([
                 hora,                 # [0] Hora
                 evento,               # [1] Evento
-                config.activo_actual, # [2] Activo
-                config.valor_lote,    # [3] Lote
-                config.valor_compra,  # [4] Precio Compra
-                config.valor_venta,   # [5] Precio Venta
-                config.valor_ema_35,  # [6] EMA 35
-                config.valor_ema_50,  # [7] EMA 50
-                config.valor_rsi,     # [8] RSI
-                config.valor_macd,    # [9] MACD
+                parametros.activo_actual, # [2] Activo
+                parametros.valor_lote,    # [3] Lote
+                parametros.valor_compra,  # [4] Precio Compra
+                parametros.valor_venta,   # [5] Precio Venta
+                parametros.valor_ema_35,  # [6] EMA 35
+                parametros.valor_ema_50,  # [7] EMA 50
+                parametros.valor_rsi,     # [8] RSI
+                parametros.valor_macd,    # [9] MACD
                 "",                   # [10] Beneficio % (Vacio al abrir)
                 "",                   # [11] Beneficio Neto (Vacio al abrir)
                 "Pendiente",          # [12] Operación Ganada (Estado inicial)
-                config.log_operacion, # [13] Log
+                parametros.log_operacion, # [13] Log
                 "",                   # [14] Motivo Cierre (Vacio al abrir)
                 nombre_patron         # [15] Patrón gráfico detectado
             ])
             
-        print(f"💾 [SISTEMA]: Datos guardados en estadísticas para {evento} en {config.activo_actual}.")
+        print(f"💾 [SISTEMA]: Datos guardados en estadísticas para {evento} en {parametros.activo_actual}.")
     except Exception as e:
-        config.error = traceback.format_exc()
+        parametros.error = traceback.format_exc()
 
 def actualizar_ultima_operacion(datos, ganada, motivo):
     """
@@ -103,4 +103,4 @@ def actualizar_ultima_operacion(datos, ganada, motivo):
         print(f"💾 [ESTADÍSTICAS]: Última fila actualizada con éxito")
         
     except Exception as e:
-        config.error = traceback.format_exc()
+        parametros.error = traceback.format_exc()
