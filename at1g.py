@@ -17,7 +17,7 @@ import config.config as config
 from patrones.identificar_patrones import identificar_patrones
 from extraction.candles import extraer_velas
 from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
-from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general, ui_patrones
+from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_datos_generales, ui_patrones
 from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre
 
 hora_apertura_orden = None
@@ -297,7 +297,7 @@ def bot_scalping():
                 print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
                 print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
                 print("=" * 75)
-                print(f"{ui_general()}")
+                print(f"{ui_datos_generales()}")
                 print(f"{texto_indicadores}")
                 print(f"{texto_operacion_activa}")
                 print("-" * 75)

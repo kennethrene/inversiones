@@ -1,5 +1,17 @@
 import pandas as pd
 
+# ============================================================================
+# Preload de valores iniciales para no esperar que pase el tiempo y tener info
+# ============================================================================
+CARGAR_DATOS = True
+PRELOAD_HISTORICO_VOLUMEN =  [5000, 5000, 5492, 3817, 5425, 2564]
+PRELOAD_HISTORICO_MACD =  [7.91, 7.64, 5.06]
+PRELOAD_HISTORICO_RSI = [55, 31]
+PRELOAD_PROMEDIO_VOLUMEN = 5000
+PRELOAD_PROMEDIO_VOLUMEN_SIN_ACTUAL = 5000
+PRELOAD_VALOR_COMPRA_ABRIO = 0
+PRELOAD_VALOR_VENTA_ABRIO = 0
+
 # ===========================================================================
 # ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
 # ===========================================================================
@@ -87,17 +99,6 @@ CRITERIO_INDICADORES = [
         "EMA": False
     }
 ]
-# ============================================================================
-# Preload de valores iniciales para no esperar que pase el tiempo y tener info
-# ============================================================================
-cargar_datos = True
-preload_historico_volumen =  [5000, 5000, 5492, 3817, 5425, 2564]
-preload_historico_macd =  [7.91, 7.64, 5.06]
-preload_historico_rsi = [55, 31]
-preload_promedio_volumen = 5000
-preload_promedio_volumen_sin_actual = 5000
-preload_valor_compra_abrio = 0
-preload_valor_venta_abrio = 0
 
 # ===========================================================================
 # Estructura global en memoria para compartir los datos entre hilos
@@ -131,49 +132,60 @@ estadisticas_bot = {
     "ultimo_patron_operado": ""
 }
 
-activo_actual = None
-valor_lote = None
-spread = None
+boton_comprar = None
+boton_vender = None
+
+ultimo_segundo_procesado = 0
+penultimo_segundo_procesado = 0
 motivo_cierre_stats = None
-hora_apertura_orden = None
-lista_velas_acumuladas = []
-historico_cuenta = []
-historico_macd = []
-historico_rsi = []
-historico_volumen = []
-promedio_volumen = 0.0
-promedio_volumen_sin_actual = 0.0 # Promedio de los volumenes anteriores al actual
-historico_velas = None
-ultimo_patron = "Ninguno"
-valor_rsi = 0.0
-valor_adx = 0
-valor_adx_compra = 0
-valor_adx_venta = 0
-valor_macd = 0
-valor_volumen = 0
-valor_ema_35 = 0
-valor_ema_50 = 0
-valor_bollinger_superior = 0
-valor_bollinger_media = 0
-valor_bollinger_inferior = 0
-ultimo_valor_rsi = 0
-log_operacion = None
+
+activo_actual = None
 valor_compra = None
 valor_venta = None
 ultimo_valor_compra = None
 ultimo_valor_venta = None
 valor_compra_abrio = 0.0
 valor_venta_abrio = 0.0
-ultimo_segundo_procesado = 0
-penultimo_segundo_procesado = 0
-ultimo_valor_volumen = 0
-boton_comprar = None
-boton_vender = None
+valor_lote = None
+spread = None
+
+hora_apertura_orden = None
 trailing_activado = False
+maximo_rendimiento_alcanzado = 0.0
+hora_apertura_orden = None
+bloqueo_ejecutar_orden = False
+minuto_ultima_orden = ""
+rendimiento_actual = 0.0
+
+valor_rsi = 0.0
+ultimo_valor_rsi = 0
+valor_adx = 0
+valor_adx_compra = 0
+valor_adx_venta = 0
+valor_macd = 0
+valor_volumen = 0
+promedio_volumen = 0.0
+promedio_volumen_sin_actual = 0.0 # Promedio de los volumenes anteriores al actual
+ultimo_valor_volumen = 0
+valor_ema_35 = 0
+valor_ema_50 = 0
+valor_bollinger_superior = 0
+valor_bollinger_media = 0
+valor_bollinger_inferior = 0
+historico_macd = []
+historico_rsi = []
+historico_volumen = []
+
+lista_velas_acumuladas = []
+historico_velas = None
+ultimo_patron = "Ninguno"
+
+historico_cuenta = []
+log_operacion = None
 error = None
 
 movimiento_abrupto = {
-    "US100": 20.0,       # 6 puntos en 1 segundo es una aceleración violenta
+    "US100": 20.0,      # 6 puntos en 1 segundo es una aceleración violenta
     "US30": 15.0,       # 15 puntos en 1 segundo
     "US500": 2.5,       # 2.5 puntos en 1 segundo
     "US2000": 1.2,      # 1.2 puntos en 1 segundo

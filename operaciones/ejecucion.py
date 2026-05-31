@@ -1,9 +1,14 @@
+import time
+import re
 import config.config as config
-from . import criterio1, criterio2, criterio3, criterio4, criterio5, criterio6
+from indicadores.criterios import criterio1, criterio2, criterio3, criterio4, criterio5
+from indicadores.criterios import criterio6
+from ui.interfaz import ui_trailing
+from files.tracking import guardar_estadistica
 import IA
 from datetime import datetime
 
-def ejecutar_operacion():
+def debe_ejecutar_operacion():
     if not config.USAR_IA:
         if config.valor_rsi is not None and config.valor_adx is not None:
             config.log_operacion = ""
@@ -89,3 +94,58 @@ def ejecutar_operacion():
                 config.log_operacion = f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Explicación: {explicacion}"
                 
     return ""
+
+def validar_trailing_stop():
+    try:
+        texto_porcentaje = str(config.datos_mapeados["Beneficio %"]).replace("%", "").replace(" ", "").replace(",", ".")
+        match_pct = re.search(r'([-+]?\d+\.\d+|-?\d+)', texto_porcentaje)
+        config.rendimiento_actual = float(match_pct.group(1)) if match_pct else 0.0
+    except:
+        config.rendimiento_actual = 0.0
+
+    if config.rendimiento_actual > config.maximo_rendimiento_alcanzado:
+        config.maximo_rendimiento_alcanzado = config.rendimiento_actual
+        
+    if not config.USAR_IA and config.maximo_rendimiento_alcanzado >= config.TRAILING_STOP:
+        config.trailing_activado = True
+    elif config.USAR_IA:
+        if config.datos_mapeados['Operacion'] == "Compra" and float(config.valor_compra) >= float(config.TRAILING_STOP):
+            config.trailing_activado = True
+        if config.datos_mapeados['Operacion'] == "Venta" and float(config.valor_venta) <= float(config.TRAILING_STOP):
+            config.trailing_activado = True
+
+        
+    if not config.USAR_IA:
+        if config.trailing_activado:
+            caida_desde_pico = config.maximo_rendimiento_alcanzado - config.rendimiento_actual
+            return ui_trailing(True, True, caida_desde_pico)
+        else:
+            return ui_trailing(True, False, None)
+    elif config.USAR_IA:
+        if config.trailing_activado:
+            if config.datos_mapeados['Operacion'] == "Compra" and float(config.valor_compra) > float(config.TRAILING_STOP):
+                config.STOP_LOSS = float(config.valor_compra) - float(config.DISTANCIA_TRAILING_MAXIMA)
+            if config.datos_mapeados['Operacion'] == "Venta" and float(config.valor_venta) < float(config.TRAILING_STOP):
+                config.STOP_LOSS = float(config.valor_venta) + float(config.DISTANCIA_TRAILING_MAXIMA)
+            
+            return ui_trailing(True, True, None)
+    
+    return ""
+
+def ejecutar_operacion():
+    operacion = debe_ejecutar_operacion()
+
+    if config.boton_comprar and operacion == "Comprar":                            
+            config.boton_comprar.click()
+            config.bloqueo_ejecutar_orden = True
+            config.minuto_ultima_orden = time.strftime('%M')
+            config.hora_apertura_orden = time.time()
+            config.datos_mapeados['Operacion'] = "Compra"
+            guardar_estadistica("Compra")
+    elif config.boton_vender and operacion == "Vender":                            
+            config.boton_vender.click()
+            config.bloqueo_ejecutar_orden = True
+            config.minuto_ultima_orden = time.strftime('%M')
+            config.hora_apertura_orden = time.time()
+            config.datos_mapeados['Operacion'] = "Venta"
+            guardar_estadistica("Venta")

@@ -1,7 +1,10 @@
 import re
+import os
+import time
 import config.config as config
 
 texto_separador = "-" * 75
+comando_limpiar = 'cls' if os.name == 'nt' else 'clear'
 
 def ui_macd(parent_text_content, texto_componente, historico, texto_macd_actual):
     if indicador_habilitado("MACD") and "MACD" in parent_text_content and "." in texto_componente:
@@ -153,7 +156,7 @@ def ui_ema(parent_text_content, texto_componente, texto_ema_actual):
 
     return texto_ema_actual
 
-def ui_trailing(habilitado, activo, rendimiento_actual, caida_desde_pico):
+def ui_trailing(habilitado, activo, caida_desde_pico):
     if not habilitado:
         return (
             f"{texto_separador}\n"
@@ -169,7 +172,7 @@ def ui_trailing(habilitado, activo, rendimiento_actual, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   🔥 Activado\n"
-                f"   🔥 Máximo rendimiento alcanzado : +{rendimiento_actual:.2f}%\n"
+                f"   🔥 Máximo rendimiento alcanzado : +{config.maximo_rendimiento_alcanzado:.2f}%\n"
                 f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
                 f"   🔥 % Activación de trailing     : {config.TRAILING_STOP}%\n"
                 f"   🔥 % Trailing stop              : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
@@ -180,7 +183,7 @@ def ui_trailing(habilitado, activo, rendimiento_actual, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   💤 Inactivo\n"
-                f"   % Actual    : {rendimiento_actual:+.2f}%\n"
+                f"   % Actual    : {config.rendimiento_actual:+.2f}%\n"
                 f"   % Requerido : {config.TRAILING_STOP}%\n"
             )
     else:
@@ -195,7 +198,7 @@ def ui_trailing(habilitado, activo, rendimiento_actual, caida_desde_pico):
                 f"   🔥 Stop Loss actual  : {config.STOP_LOSS}%\n"
             )
 
-def ui_stop_loss(activo, rendimiento):
+def ui_stop_loss(activo):
     if not activo:
         return (
             f"{texto_separador}\n"
@@ -210,7 +213,7 @@ def ui_stop_loss(activo, rendimiento):
             f" 🧭 STOP LOSS ACTUAL\n"
             f"  ───────────────────────────────────\n"
             f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
-            f"   🔴 ACTUAL: {rendimiento:+.2f}%\n"
+            f"   🔴 ACTUAL: {config.rendimiento_actual:+.2f}%\n"
         )
     elif config.USAR_IA:
         return (
@@ -220,9 +223,9 @@ def ui_stop_loss(activo, rendimiento):
             f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
         )
 
-def ui_operacion_activa(activo, rendimiento_actual):
+def ui_operacion_activa(activo):
     if activo:
-        icono_beneficio = "🟢" if rendimiento_actual >= 0 else "🔴"
+        icono_beneficio = "🟢" if config.rendimiento_actual >= 0 else "🔴"
 
         return (
             f"{texto_separador}\n"
@@ -260,7 +263,7 @@ def ui_estadisticas(motivo_cierre):
         f"    └ Ultimo cierre           : {motivo_cierre}\n"
     )
 
-def ui_general():
+def ui_datos_generales():
     return (
         f"{texto_separador}\n"
         f" 🏷️  ACTIVO              : {config.activo_actual}\n"
@@ -301,3 +304,23 @@ def indicador_habilitado(indicador):
         num_criterio += 1
     
     return False
+
+# IMPRESIÓN ACTUALIZADA EN LA CONSOLA
+def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre):
+    os.system(comando_limpiar)
+    print("-" * 75)
+    print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
+    print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
+    print(f"{ui_datos_generales()}")
+    print(f"{texto_indicadores}")
+    print(f"{texto_operacion_activa}")
+    print(f"{texto_trailing}")
+    print(f"{texto_stop_loss}")
+    print("-" * 75)
+    print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT}")
+    print("-" * 75)
+    print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
+    print(f"{ui_estadisticas(motivo_cierre)}")
+    print("=" * 75)
+    print(f" 🔴 Ultimo error              : {config.error}")
+    print("=" * 75)
