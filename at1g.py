@@ -13,7 +13,7 @@ import matplotlib
 matplotlib.use('TkAgg') # Fuerza a tu Mac a abrir la ventana interactiva independiente
 import mplfinance as mpf
 import matplotlib.pyplot as plt
-import config
+import config.config as config
 from patrones.identificar_patrones import identificar_patrones
 from extraction.candles import extraer_velas
 from extraction.xtb_data import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 # Importación segura del módulo de trading original
 from patrones.identificar_patrones import identificar_patrones
-from config import datos_graficos
+from config.config import datos_graficos
 
 # ===========================================================================
 # ⚙️ FIXTURE BASE Y REINICIADOR DE ESTADO

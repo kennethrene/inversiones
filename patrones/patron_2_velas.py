@@ -1,5 +1,5 @@
 import pandas as pd
-import config
+import config.config as config
 import patrones.identificar_patrones as identificar_patrones
 
 # PATRONES TRADICIONALES DE 1 Y 2 VELAS

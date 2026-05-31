@@ -1,5 +1,5 @@
 from tvDatafeed import TvDatafeed, Interval
-import config
+import config.config as config
 
 symbols = {
     "US100": "NAS100",

@@ -1,4 +1,4 @@
-import config
+import config.config as config
 from . import criterio1, criterio2, criterio3, criterio4, criterio5, criterio6
 import IA
 from datetime import datetime

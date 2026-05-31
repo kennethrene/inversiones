@@ -1,7 +1,7 @@
 import csv
 import os
 import time
-import config
+import config.config as config
 import traceback
 
 def actualizar_estadisticas_cierre(ganada=False):

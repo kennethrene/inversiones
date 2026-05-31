@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Criterio 2: El RSI estuvo en la zona de sobrecompra o sobreventa y debemos actuar a favor de la tendencia
 def ejecutar_criterio(tendencia_alcista, tendencia_bajista):

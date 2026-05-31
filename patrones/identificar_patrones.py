@@ -1,5 +1,5 @@
 import pandas as pd
-import config
+import config.config as config
 from . import patron_1_vela
 from . import patron_2_velas
 from . import patron_3_velas

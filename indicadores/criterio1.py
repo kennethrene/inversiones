@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Criterio 1: El RSI está en la zona de sobrecompra o sobreventa y el MACD se debilitó
 def ejecutar_criterio():

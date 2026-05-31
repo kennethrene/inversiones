@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Criterio 4: EMA y RSI
 def ejecutar_criterio(tendencia_alcista, tendencia_bajista):

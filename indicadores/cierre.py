@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 def ejecutar_cierre(maximo_rendimiento_alcanzado, rendimiento_actual):
     ejecutar_cierre = False

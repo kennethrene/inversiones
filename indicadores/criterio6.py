@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Criterio rápido: Subidas y bajadas muy rápidas
 def ejecutar_criterio():    

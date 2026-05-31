@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Criterio 3: MACD y Bollinger - La barra de MACD está creciendo ya sea bajista o alcista
 def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcista, macd_disminuyendo_bajista):

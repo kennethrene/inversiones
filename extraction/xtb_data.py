@@ -2,7 +2,7 @@ import re
 import pandas as pd
 from selenium.webdriver.common.by import By
 from extraction.candles import extraer_velas
-import config
+import config.config as config
 
 # ===========================================================================
 # EXTRACCIÓN DE DATOS FILTRADOS POR COLUMNA DESDE EL DOM

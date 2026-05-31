@@ -1,5 +1,5 @@
 import re
-import config
+import config.config as config
 
 texto_separador = "-" * 75
 

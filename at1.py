@@ -5,7 +5,7 @@ import traceback
 import time
 import os
 import re
-import config
+import config.config as config
 from indicadores.operaciones import ejecutar_operacion
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_trailing, ui_stop_loss, ui_operacion_activa, ui_estadisticas, ui_volumen, ui_general, ui_bollinger
 from files.tracking import guardar_estadistica, actualizar_ultima_operacion, actualizar_estadisticas_cierre

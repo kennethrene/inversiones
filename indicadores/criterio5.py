@@ -1,4 +1,4 @@
-import config
+import config.config as config
 
 # Cirterio 5: RSI decreciendo o creciendo en la zona de posible compra o venta
 def ejecutar_criterio(rsi_creciendo, rsi_disminuyendo):
