@@ -14,11 +14,11 @@ CRITERIO_MACD_FUERTE = 1.5
 PORCENTAJE_BOLLINGER_BANDA_MEDIA = 0.75 # Porcentaje (entre 0 y 1) del límite entre las bandas exteriores y la media para saber si el precio está cerca del extremo
 
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
-PORCENTAJE_STOP_LOSS = -10.0            # Límite estricto de pérdida permitida (debe ser NEGATIVO)
-PORCENTAJE_ACTIVACION_TRAILING = 15.0   # % mínimo de ganancia para activar la persecución inteligente
+TRAILING_STOP = 15.0                    # Mínimo de ganancia para activar la persecución inteligente (por defecto en %)
 DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
-TAKE_PROFIT_MONETARIO = 5.0             # 🔥 Modifica este valor por la ganancia deseada
-PORCENTAJE_STOP_LOSS  = -20.0           # 🔴 Límite estricto de pérdida permitida en % (Gatillo SL)
+TAKE_PROFIT = 5.0                       # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
+STOP_LOSS  = -20.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
+STOP_LOSS_INICIAL_TRAILING = -20.0      # 🔴 Stop loss inicial antes de ser movido con el trailing stop (Modo IA)
 
 # PARÁMETROS DE INDICADORES DE DOBLE TECHO / SUELO Y HOMBRE CABEZA HOMBRO
 ENABLE_COMPLEX_CANDLES = True
@@ -34,6 +34,7 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # ============================================================================
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS
 # ============================================================================
+USAR_IA = True
 CRITERIO1 = False
 CRITERIO2 = False
 CRITERIO3 = True
@@ -41,7 +42,7 @@ CRITERIO4 = False
 CRITERIO5 = False
 CRITERIO6 = True # Extremo
 
-CRITERIO_INDICADORES = [    
+CRITERIO_INDICADORES = [
     {},
     {
         # 1

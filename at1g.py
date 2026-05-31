@@ -155,7 +155,7 @@ def bot_scalping():
                     # ─── LÓGICA DE CONTROL POR % NATIVO: STOP LOSS DIRECTO ───
                     texto_stop_loss = ui_stop_loss(True, rendimiento_actual)
 
-                    if rendimiento_actual <= config.PORCENTAJE_STOP_LOSS:
+                    if rendimiento_actual <= config.STOP_LOSS:
                         config.motivo_cierre_stats = f"Loss ({rendimiento_actual:+.2f}%)"
                         operacion_ganada = False
                         ejecutar_cierre = True
@@ -164,7 +164,7 @@ def bot_scalping():
                     if rendimiento_actual > maximo_rendimiento_alcanzado:
                         maximo_rendimiento_alcanzado = rendimiento_actual
                         
-                    if maximo_rendimiento_alcanzado >= config.PORCENTAJE_ACTIVACION_TRAILING:
+                    if maximo_rendimiento_alcanzado >= config.TRAILING_STOP:
                         trailing_activado = True
 
                     if trailing_activado:                        
@@ -176,12 +176,12 @@ def bot_scalping():
                             ejecutar_cierre = True
                             operacion_ganada = True
                     else:
-                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {config.PORCENTAJE_ACTIVACION_TRAILING}%)"
+                        reporte_trailing_consola = f"💤 Inactivo (% Actual: {rendimiento_actual:+.2f}% / Requerido: {config.TRAILING_STOP}%)"
 
                     texto_operacion_activa = ui_operacion_activa(True, rendimiento_actual)
                     beneficio_neto =  float(config.datos_mapeados['Beneficio Neto'])
 
-                    if beneficio_neto >= config.TAKE_PROFIT_MONETARIO:
+                    if beneficio_neto >= config.TAKE_PROFIT:
                         ejecutar_cierre = True
                         operacion_ganada = True
                         config.motivo_cierre_stats = f"Take Profit Alcanzado (+${beneficio_neto:.2f})"
@@ -305,7 +305,7 @@ def bot_scalping():
                 print("-" * 75)
                 print(f"{texto_stop_loss}")
                 print("-" * 75)
-                print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
+                print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                 print("=" * 75)

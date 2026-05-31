@@ -166,14 +166,27 @@ def bot_scalping():
                     if rendimiento_actual > maximo_rendimiento_alcanzado:
                         maximo_rendimiento_alcanzado = rendimiento_actual
                         
-                    if maximo_rendimiento_alcanzado >= config.PORCENTAJE_ACTIVACION_TRAILING:
+                    if not config.USAR_IA and maximo_rendimiento_alcanzado >= config.TRAILING_STOP:
                         config.trailing_activado = True
+                    elif config.USAR_IA:
+                        if config.datos_mapeados['Operacion'] == "Compra" and float(config.valor_compra) >= float(config.TRAILING_STOP):
+                            config.trailing_activado = True
+                        if config.datos_mapeados['Operacion'] == "Venta" and float(config.valor_venta) <= float(config.TRAILING_STOP):
+                            config.trailing_activado = True
+
                         
-                    if config.trailing_activado:
-                        caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
-                        texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
-                    else:
-                        texto_trailing = ui_trailing(True, False, rendimiento_actual, None)
+                    if not config.USAR_IA:
+                        if config.trailing_activado:
+                            caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
+                            texto_trailing = ui_trailing(True, True, maximo_rendimiento_alcanzado, caida_desde_pico)
+                        else:
+                            texto_trailing = ui_trailing(True, False, rendimiento_actual, None)
+                    elif config.USAR_IA:
+                        if config.trailing_activado:
+                            if config.datos_mapeados['Operacion'] == "Compra" and float(config.valor_compra) > float(config.TRAILING_STOP):
+                                config.STOP_LOSS = float(config.valor_compra) - float(config.DISTANCIA_TRAILING_MAXIMA)
+                            if config.datos_mapeados['Operacion'] == "Venta" and float(config.valor_venta) < float(config.TRAILING_STOP):
+                                config.STOP_LOSS = float(config.valor_venta) + float(config.DISTANCIA_TRAILING_MAXIMA)
 
                     texto_operacion_activa = ui_operacion_activa(True, rendimiento_actual)
                     beneficio_neto =  float(config.datos_mapeados['Beneficio Neto'])
@@ -265,10 +278,10 @@ def bot_scalping():
                         trailing_activado = False
                         maximo_rendimiento_alcanzado = 0.0
                         operacion_ganada = None
-                        config.PORCENTAJE_ACTIVACION_TRAILING = 15.0
+                        config.TRAILING_STOP = 15.0
                         config.DISTANCIA_TRAILING_MAXIMA = 4.0
-                        config.TAKE_PROFIT_MONETARIO = 5.0
-                        config.PORCENTAJE_STOP_LOSS  = -10.0
+                        config.TAKE_PROFIT = 5.0
+                        config.STOP_LOSS  = -10.0
                         config.trailing_activado = False
 
                         # Sincronizador de estadísticas con lectura de resultados reales
@@ -294,7 +307,7 @@ def bot_scalping():
                 print(f"{texto_trailing}")
                 print(f"{texto_stop_loss}")
                 print("-" * 75)
-                print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT_MONETARIO}")
+                print(f" 💰 TAKE PROFIT : {config.TAKE_PROFIT}")
                 print("-" * 75)
                 print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
                 print(f"{ui_estadisticas(motivo_cierre)}")

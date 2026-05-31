@@ -40,3 +40,25 @@ def extraer_velas():
         return data[:-1]
     else:
         config.error = "Error: No se recibieron datos de TradingView"
+
+def extraer_velas_para_IA(activo_actual):
+    # 1. Inicializar la conexión con TradingView
+    tv = TvDatafeed()
+
+    # 2. Descargar las últimas 60 velas de FX:NAS100
+    df = tv.get_hist(
+        symbol=symbols.get(activo_actual),
+        exchange='FX', 
+        interval=Interval.in_1_minute,
+        n_bars=61
+    )
+
+    # 3. Procesar, renombrar columnas y convertir al formato solicitado
+    if df is not None and not df.empty:
+        df = df[['open', 'high', 'low', 'close']]
+        df.columns = ['Open', 'High', 'Low', 'Close']
+        data = df.to_dict(orient='records')
+
+        return data[:-1]
+    else:
+        error = "Error: No se recibieron datos de TradingView"

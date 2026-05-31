@@ -13,9 +13,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
 
             # Aumentando MACD y valor de compra por debajo de la banda inferior
             if tendencia_bajista and float(config.valor_compra) < float(config.valor_bollinger_inferior):
-                config.PORCENTAJE_STOP_LOSS = -10
-                config.TAKE_PROFIT_MONETARIO = 10
-                config.PORCENTAJE_ACTIVACION_TRAILING = 20
+                config.STOP_LOSS = -10
+                config.TAKE_PROFIT = 10
+                config.TRAILING_STOP = 20
                 config.DISTANCIA_TRAILING_MAXIMA = 5
                 config.log_operacion = f"ℹ️  Comprando por criterio 3 en tendencia bajista. Se espera resistencia en Bollinger inferior: {config.valor_compra} < {config.valor_bollinger_inferior} - MACD: {config.historico_macd} - Aumentando márgenes"
                 return "Comprar"
@@ -23,9 +23,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
             # Es tendencia alcista y el valor de compra está por encima de la banda superior y el valor actual de la compra es mayor que el valor con el que se abrió la vela
             # osea, no es una vela roja si no verde lo que indica que el precio tiende a subir, de lo contrario se está recuperando y viene un retroceso de bajada
             elif tendencia_alcista and float(config.valor_compra) > float(config.valor_bollinger_superior) and float(config.valor_compra_abrio) < float(config.valor_compra):
-                config.PORCENTAJE_STOP_LOSS = -5
-                config.TAKE_PROFIT_MONETARIO = 2
-                config.PORCENTAJE_ACTIVACION_TRAILING = 5
+                config.STOP_LOSS = -5
+                config.TAKE_PROFIT = 2
+                config.TRAILING_STOP = 5
                 config.DISTANCIA_TRAILING_MAXIMA = 2
                 config.log_operacion = f"ℹ️  Comprando por criterio 3 en tendencia alcista con valor de compra mayor a Bollinger superior {config.valor_compra} > {config.valor_bollinger_superior} - MACD: {config.historico_macd} - Reduciendo márgenes"
                 return "Comprar"
@@ -45,9 +45,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
             elif tendencia_alcista and float(config.valor_compra) > float(config.valor_bollinger_media) \
                     and float(config.valor_compra) > banda_limite \
                     and float(config.valor_compra) > float(config.valor_compra_abrio):
-                config.PORCENTAJE_STOP_LOSS = -10
-                config.TAKE_PROFIT_MONETARIO = 3
-                config.PORCENTAJE_ACTIVACION_TRAILING = 8
+                config.STOP_LOSS = -10
+                config.TAKE_PROFIT = 3
+                config.TRAILING_STOP = 8
                 config.DISTANCIA_TRAILING_MAXIMA = 4
                 config.log_operacion = f"ℹ️  Comprando por criterio 3 en tendencia alcista con valor de compra superior a Bollinger media {config.valor_compra} > {config.valor_bollinger_media} - MACD: {config.historico_macd} - Reduciendo márgenes"
                 return "Comprar"
@@ -74,9 +74,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
 
             # Disminuyendo MACD y valor de venta por encima de la banda superior
             if tendencia_alcista and float(config.valor_venta) > float(config.valor_bollinger_superior):
-                config.PORCENTAJE_STOP_LOSS = -10
-                config.TAKE_PROFIT_MONETARIO = 10
-                config.PORCENTAJE_ACTIVACION_TRAILING = 20
+                config.STOP_LOSS = -10
+                config.TAKE_PROFIT = 10
+                config.TRAILING_STOP = 20
                 config.DISTANCIA_TRAILING_MAXIMA = 5
                 config.log_operacion = f"ℹ️  Vendiendo por criterio 3 en tendencia alcista. Se espera resistencia en Bollinger superior: {config.valor_venta} > {config.valor_bollinger_superior} - MACD: {config.historico_macd} - Aumentando márgenes"
                 return "Vender"
@@ -84,9 +84,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
             # Es tendencia bajista y el valor de venta está por debajo de la banda inferior y el valor actual de la venta es menor que el valor con el que se abrió la vela
             # osea, no es una vela verde si no roja lo que indica que el precio tiende a bajar, de lo contrario se está recuperando y viene un retroceso de subida
             elif tendencia_bajista and float(config.valor_venta) < float(config.valor_bollinger_inferior) and float(config.valor_venta_abrio) > float(config.valor_venta):
-                config.PORCENTAJE_STOP_LOSS = -5
-                config.TAKE_PROFIT_MONETARIO = 2
-                config.PORCENTAJE_ACTIVACION_TRAILING = 5
+                config.STOP_LOSS = -5
+                config.TAKE_PROFIT = 2
+                config.TRAILING_STOP = 5
                 config.DISTANCIA_TRAILING_MAXIMA = 2
                 config.log_operacion = f"ℹ️  Vendiendo por criterio 3 en tendencia bajista con valor de venta menor a Bollinger inferior {config.valor_venta} < {config.valor_bollinger_inferior} - MACD: {config.historico_macd} - Reduciendo márgenes"
                 return "Vender"
@@ -106,9 +106,9 @@ def ejecutar_criterio(tendencia_alcista, tendencia_bajista, macd_creciendo_alcis
             elif tendencia_bajista and float(config.valor_venta) < float(config.valor_bollinger_media) \
                     and float(config.valor_venta) < banda_limite \
                     and float(config.valor_venta) < float(config.valor_venta_abrio):
-                config.PORCENTAJE_STOP_LOSS = -10
-                config.TAKE_PROFIT_MONETARIO = 3
-                config.PORCENTAJE_ACTIVACION_TRAILING = 8
+                config.STOP_LOSS = -10
+                config.TAKE_PROFIT = 3
+                config.TRAILING_STOP = 8
                 config.DISTANCIA_TRAILING_MAXIMA = 4
                 config.log_operacion = f"ℹ️  Vendiendo por criterio 3 en tendencia bajista con valor de venta menor que Bollinger media y entre límite y banda inferior {config.valor_venta} < {config.valor_bollinger_media} - MACD: {config.historico_macd} -  Reduciendo márgenes"
                 return "Vender"

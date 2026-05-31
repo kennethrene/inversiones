@@ -161,26 +161,39 @@ def ui_trailing(habilitado, activo, rendimiento_actual, caida_desde_pico):
             f"  ───────────────────────────────────\n"
             f"    Inactivo (Sin operaciones en ejecución)\n"
         )
-    elif activo:
-        return (
-            f"{texto_separador}\n"
-            f" 🧭 TRAILING STOP\n"
-            f"  ───────────────────────────────────\n"
-            f"   🔥 Activado\n"
-            f"   🔥 Máximo rendimiento alcanzado : +{rendimiento_actual:.2f}%\n"
-            f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
-            f"   🔥 % Activación de trailing     : {config.PORCENTAJE_ACTIVACION_TRAILING}%\n"
-            f"   🔥 % Trailing stop              : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
-        )
+    
+    if not config.USAR_IA:
+        if activo:
+            return (
+                f"{texto_separador}\n"
+                f" 🧭 TRAILING STOP\n"
+                f"  ───────────────────────────────────\n"
+                f"   🔥 Activado\n"
+                f"   🔥 Máximo rendimiento alcanzado : +{rendimiento_actual:.2f}%\n"
+                f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
+                f"   🔥 % Activación de trailing     : {config.TRAILING_STOP}%\n"
+                f"   🔥 % Trailing stop              : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
+            )
+        else:
+            return (
+                f"{texto_separador}\n"
+                f" 🧭 TRAILING STOP\n"
+                f"  ───────────────────────────────────\n"
+                f"   💤 Inactivo\n"
+                f"   % Actual    : {rendimiento_actual:+.2f}%\n"
+                f"   % Requerido : {config.TRAILING_STOP}%\n"
+            )
     else:
         return (
-            f"{texto_separador}\n"
-            f" 🧭 TRAILING STOP\n"
-            f"  ───────────────────────────────────\n"
-            f"   💤 Inactivo\n"
-            f"   % Actual    : {rendimiento_actual:+.2f}%\n"
-            f"   % Requerido : {config.PORCENTAJE_ACTIVACION_TRAILING}%\n"
-        )
+                f"{texto_separador}\n"
+                f" 🧭 TRAILING STOP\n"
+                f"  ───────────────────────────────────\n"
+                f"   🔥 Activado\n"
+                f"   🔥 Trailing Stop     : {config.TRAILING_STOP}%\n"
+                f"   🔥 Distancia Máxima  : {config.DISTANCIA_TRAILING_MAXIMA}%\n"
+                f"   🔥 Stop Loss inicial : {config.STOP_LOSS_INICIAL_TRAILING}%\n"
+                f"   🔥 Stop Loss actual  : {config.STOP_LOSS}%\n"
+            )
 
 def ui_stop_loss(activo, rendimiento):
     if not activo:
@@ -191,13 +204,20 @@ def ui_stop_loss(activo, rendimiento):
             f"   🔴 FIJADO: --\n"
             f"   🔴 ACTUAL: --\n"
         )
-    else:
+    elif not config.USAR_IA:
         return (
             f"{texto_separador}\n"
             f" 🧭 STOP LOSS ACTUAL\n"
             f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {config.PORCENTAJE_STOP_LOSS:.1f}%\n"
+            f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
             f"   🔴 ACTUAL: {rendimiento:+.2f}%\n"
+        )
+    elif config.USAR_IA:
+        return (
+            f"{texto_separador}\n"
+            f" 🧭 STOP LOSS ACTUAL\n"
+            f"  ───────────────────────────────────\n"
+            f"   🔴 FIJADO: {config.STOP_LOSS:.1f}%\n"
         )
 
 def ui_operacion_activa(activo, rendimiento_actual):
@@ -264,6 +284,9 @@ def ui_patrones():
     )
 
 def indicador_habilitado(indicador):
+    if config.USAR_IA:
+        return False
+
     num_criterio = 0
 
     for criterio in config.CRITERIO_INDICADORES:
