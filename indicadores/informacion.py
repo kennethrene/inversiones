@@ -18,6 +18,16 @@ def precargar_datos():
         parametros.promedio_volumen = parametros.PRELOAD_PROMEDIO_VOLUMEN
         parametros.valor_compra_abrio = parametros.PRELOAD_VALOR_COMPRA_ABRIO
         parametros.valor_venta_abrio = parametros.PRELOAD_VALOR_VENTA_ABRIO
+        
+        parametros.activo_actual = parametros.PRELOAD_ACTIVO_ACTUAL
+        parametros.datos_mapeados['Operacion'] = parametros.PRELOAD_OPERACION
+        parametros.datos_mapeados['Precio Apertura'] = parametros.PRELOAD_PRECIO_APERTURA
+        parametros.TAKE_PROFIT = parametros.PRELOAD_TAKE_PROFIT
+        parametros.STOP_LOSS = parametros.PRELOAD_STOP_LOSS
+        parametros.TRAILING_STOP = parametros.PRELOAD_TRAILING_STOP
+        parametros.diferencia_precio = parametros.PRELOAD_DIFERENCIA_PRECIO
+        parametros.datos_mapeados["Patron"] = parametros.PRELOAD_PATRON
+        parametros.datos_mapeados['Beneficio Neto'] = parametros.PRELOAD_BENEFICIO_NETO
         parametros.CARGAR_DATOS = False
 
 def obtener_texto_indicadores(elementos_indicadores):

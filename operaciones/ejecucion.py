@@ -64,26 +64,32 @@ def debe_ejecutar_operacion():
     else:
         now = datetime.now()
 
-        if now.minute % 5 == 0 and now.second == 0:
-            accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada = IA.ejecutar_operacion()
+        if now.minute % parametros.TEMPORALIDAD_MINUTOS == 0 and now.second == 0:
+            accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera = IA.ejecutar_operacion()
 
             if accion != "Mantener":
-                # Ajustar valores de TradingView a los valores de XTB
+                # Ajustar valores de TradingView a los valores de XTB                
                 diferencia_take_profit = abs(float(valor_entrada) - float(take_profit))
                 diferencia_trailing_stop = abs(float(valor_entrada) - float(trailing_stop))
                 diferencia_stop_loss = abs(float(valor_entrada) - float(stop_loss))
+                parametros.velas_espera = velas_espera
 
                 if accion == "Comprar":
+                    parametros.diferencia_precio = abs(float(parametros.valor_compra) - float(valor_entrada))
                     take_profit_ajustado = float(parametros.valor_compra) + diferencia_take_profit
                     trailing_stop_ajustado = float(parametros.valor_compra) + diferencia_trailing_stop
                     stop_loss_ajustado = float(parametros.valor_compra) - diferencia_stop_loss
                 elif accion == "Vender":
+                    parametros.diferencia_precio = abs(float(parametros.valor_venta) - float(valor_entrada))
                     take_profit_ajustado = float(parametros.valor_venta) - diferencia_take_profit
                     trailing_stop_ajustado = float(parametros.valor_venta) - diferencia_trailing_stop
                     stop_loss_ajustado = float(parametros.valor_venta) + diferencia_stop_loss
 
                 parametros.datos_mapeados["Criterio Apertura"] = "Criterio IA"
-                parametros.log_operacion = f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit_ajustado} - Stop loss: {stop_loss_ajustado} -  Trailing Stop: {trailing_stop_ajustado}"
+                parametros.datos_mapeados["Patron"] = patron
+                parametros.log_operacion = f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit_ajustado:.2f} \
+                    - Stop loss: {stop_loss_ajustado:.2f} -  Trailing Stop: {trailing_stop_ajustado:.2f} \
+                    - Próxima validación en {parametros.velas_espera} velas"
                 parametros.TAKE_PROFIT = take_profit_ajustado
                 parametros.STOP_LOSS = stop_loss_ajustado
                 parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
@@ -124,13 +130,53 @@ def validar_trailing_stop():
     elif parametros.USAR_IA:
         if parametros.trailing_activado:
             if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) > float(parametros.TRAILING_STOP):
-                parametros.STOP_LOSS = float(parametros.valor_compra) - float(parametros.DISTANCIA_TRAILING_MAXIMA)
+                nuevo_stop_loss = float(parametros.valor_compra) - float(parametros.DISTANCIA_TRAILING_MAXIMA)
+
+                if float(nuevo_stop_loss) > float(parametros.STOP_LOSS):
+                    parametros.STOP_LOSS = nuevo_stop_loss
             if parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) < float(parametros.TRAILING_STOP):
-                parametros.STOP_LOSS = float(parametros.valor_venta) + float(parametros.DISTANCIA_TRAILING_MAXIMA)
+                nuevo_stop_loss = float(parametros.valor_venta) + float(parametros.DISTANCIA_TRAILING_MAXIMA)
+
+                if float(nuevo_stop_loss) < float(parametros.STOP_LOSS):
+                    parametros.STOP_LOSS = nuevo_stop_loss
             
-            return ui_trailing(True, True, None)
+        return ui_trailing(True, True, None)
     
     return ""
+
+def reevaluar_operacion():
+    if parametros.USAR_IA:
+        now = datetime.now()
+
+        if now.minute % int(parametros.TEMPORALIDAD_MINUTOS) * int(parametros.velas_espera) == 0 and now.second == 0:
+            accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera = IA.reevaluar_operacion()
+            parametros.velas_espera = velas_espera
+
+            if accion != "Mantener":
+                if accion == "Cerrar":
+                    return "Cerrar", f"IA recomienda cerrar: {explicacion}"
+                
+                # Ajustar operación actual
+                # Ajustar valores de TradingView a los valores de XTB                
+                take_profit_ajustado = abs(float(parametros.diferencia_precio) + float(take_profit))
+                trailing_stop_ajustado = abs(float(parametros.diferencia_precio) + float(trailing_stop))
+                stop_loss_ajustado = abs(float(parametros.diferencia_precio) + float(stop_loss))
+
+                parametros.log_operacion = f"ℹ️  IA ajustando {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit_ajustado:.2f} \
+                    - Stop loss: {stop_loss_ajustado:.2f} -  Trailing Stop: {trailing_stop_ajustado:.2f} - Próxima validación en {parametros.velas_espera} velas \
+                    - Explicación: {explicacion}"
+                parametros.TAKE_PROFIT = take_profit_ajustado
+                parametros.STOP_LOSS = stop_loss_ajustado
+                parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
+                parametros.TRAILING_STOP = trailing_stop_ajustado
+                parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
+                guardar_estadistica("Ajuste")
+                return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
+            else:
+                parametros.log_operacion = f"ℹ️  IA recomienda mantener {accion}"
+    
+    return "", ""
+
 
 def ejecutar_operacion():
     operacion = debe_ejecutar_operacion()

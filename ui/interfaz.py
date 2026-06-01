@@ -192,10 +192,10 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   🔥 Activado\n"
-                f"   🔥 Trailing Stop     : {parametros.TRAILING_STOP}%\n"
-                f"   🔥 Distancia Máxima  : {parametros.DISTANCIA_TRAILING_MAXIMA}%\n"
-                f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING}%\n"
-                f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS}%\n"
+                f"   🔥 Trailing Stop     : {parametros.TRAILING_STOP}\n"
+                f"   🔥 Distancia Máxima  : {parametros.DISTANCIA_TRAILING_MAXIMA}\n"
+                f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING}\n"
+                f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS}\n"
             )
 
 def ui_stop_loss(activo):
@@ -220,7 +220,7 @@ def ui_stop_loss(activo):
             f"{texto_separador}\n"
             f" 🧭 STOP LOSS ACTUAL\n"
             f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}%\n"
+            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}\n"
         )
 
 def ui_operacion_activa(activo):
@@ -234,8 +234,8 @@ def ui_operacion_activa(activo):
             f"   Operación          : {parametros.datos_mapeados["Operacion"]}\n"
             f"   💱 Instrumento     : {parametros.datos_mapeados['Activo']} ({parametros.datos_mapeados['Tipo']})\n"
             f"   📦 Volumen (Lotes) : {parametros.datos_mapeados['Volumen']}\n"
-            f"   🚀 Precio Apertura : {parametros.datos_mapeados['Precio Apertura']}\n"
-            f"   📊 Precio Actual   : {parametros.datos_mapeados['Precio Actual']}\n"
+            f"   🚀 Precio Apertura : {float(parametros.datos_mapeados['Precio Apertura'].replace(" ", ""))}\n"
+            f"   📊 Precio Actual   : {float(parametros.datos_mapeados['Precio Actual'].replace(" ", ""))}\n"
             f"   {icono_beneficio} Beneficio Neto  : {parametros.datos_mapeados['Beneficio Neto']} ({parametros.datos_mapeados['Beneficio %']})\n\n"
             f"   Log operación\n"
             f"  ───────────────────────────────────\n"
@@ -317,7 +317,7 @@ def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, text
     print(f"{texto_trailing}")
     print(f"{texto_stop_loss}")
     print("-" * 75)
-    print(f" 💰 TAKE PROFIT : {parametros.TAKE_PROFIT}")
+    print(f" 💰 TAKE PROFIT : {parametros.TAKE_PROFIT:.2f}")
     print("-" * 75)
     print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
     print(f"{ui_estadisticas(motivo_cierre)}")

@@ -287,7 +287,6 @@ def bot_scalping():
                             actualizar_ultima_operacion(parametros.datos_mapeados, "No", motivo_cierre_stats)
                             actualizar_estadisticas_cierre(False)
                         
-                        time.sleep(5)
                     except Exception as error_ejecucion:
                         parametros.error = traceback.format_exc()
                     

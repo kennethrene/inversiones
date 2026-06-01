@@ -1,12 +1,12 @@
 import pandas as pd
 
-MOSTRAR_GRAFICO = True
-DEBUG = True # En True no realiza ninguna operación ... solo se conecta y muestra valores
+MOSTRAR_GRAFICO = False
+DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
 
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
-CARGAR_DATOS = True
+CARGAR_DATOS = False
 PRELOAD_HISTORICO_VOLUMEN =  [5000, 5000, 5492, 3817, 5425, 2564]
 PRELOAD_HISTORICO_MACD =  [7.91, 7.64, 5.06]
 PRELOAD_HISTORICO_RSI = [55, 31]
@@ -15,10 +15,19 @@ PRELOAD_PROMEDIO_VOLUMEN_SIN_ACTUAL = 5000
 PRELOAD_VALOR_COMPRA_ABRIO = 0
 PRELOAD_VALOR_VENTA_ABRIO = 0
 
+PRELOAD_ACTIVO_ACTUAL = "US100"
+PRELOAD_OPERACION = 'Compra'
+PRELOAD_PRECIO_APERTURA = 30580.79
+PRELOAD_TAKE_PROFIT = 30620
+PRELOAD_STOP_LOSS = 30514
+PRELOAD_TRAILING_STOP = 30589
+PRELOAD_DIFERENCIA_PRECIO= 50
+PRELOAD_PATRON = 'Tendencia Alcista Continuada'
+PRELOAD_BENEFICIO_NETO = -6.56
 # ===========================================================================
 # ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
 # ===========================================================================
-TEMPORALIDAD_MINUTOS = 1    # Intervalo de corte de la vela (ej: 1, 5, 15)
+TEMPORALIDAD_MINUTOS = 5    # Intervalo de corte de la vela (ej: 1, 5, 15)
 RSI_SOBRECOMPRA = 80.0      # Nivel estricto de sobrecompra para ventas
 RSI_SOBREVENTA = 15.0       # Nivel estricto de sobreventa para compras
 RSI_SOBRECOMPRA_MACD = 70.0 # Nivel de sobreventa para compras para validar con macd
@@ -50,6 +59,8 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS
 # ============================================================================
 USAR_IA = True
+MODELO_IA ="gemini-3.1-flash-lite" #'gemini-3.5-flash',
+
 CRITERIO1 = False
 CRITERIO2 = False
 CRITERIO3 = True
@@ -124,7 +135,8 @@ datos_mapeados = {
     "Beneficio %": "N/D", 
     "Beneficio Neto": "N/D",
     "Operacion": "N/D",
-    "Criterio Apertura": "N/D"
+    "Criterio Apertura": "N/D",
+    "Patron": "N/D"
 }
 
 # 🟢 CONTADORES DE ESTADÍSTICA EN VIVO
@@ -159,6 +171,8 @@ hora_apertura_orden = None
 bloqueo_ejecutar_orden = False
 minuto_ultima_orden = ""
 rendimiento_actual = 0.0
+diferencia_precio = 0.0 # Diferencia entre la plataforma de compra y la de lectura de velas
+velas_espera = 0 # Número de velas que debo esperar para validar la decisión tomada por la IA
 
 valor_rsi = 0.0
 ultimo_valor_rsi = 0

@@ -52,7 +52,8 @@ def ejecutar_cierre(driver, motivo_cierre):
             actualizar_ultima_operacion(parametros.datos_mapeados, "Perdida", motivo_cierre)
             actualizar_estadisticas_cierre(False)
 
-        time.sleep(5)
+        if not parametros.USAR_IA:
+            time.sleep(5)
     except Exception as error_ejecucion:
         parametros.error = traceback.format_exc()
 
@@ -63,12 +64,12 @@ def cierre_stop_loss(rendimiento_actual):
             operacion_ganada = False
 
             return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Compra" and parametros.valor_compra <= parametros.STOP_LOSS:
+    elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
         motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {parametros.STOP_LOSS}"
         operacion_ganada = False
 
         return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Venta" and parametros.valor_venta >= parametros.STOP_LOSS:
+    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
         motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {parametros.STOP_LOSS}"
         operacion_ganada = False
 
@@ -80,7 +81,7 @@ def cierre_trailing_stop(maximo_rendimiento_alcanzado, rendimiento_actual):
     if not parametros.USAR_IA:
         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
     
-        if caida_desde_pico >= parametros.DISTANCIA_TRAILING_MAXIMA:
+        if float(caida_desde_pico) >= float(parametros.DISTANCIA_TRAILING_MAXIMA):
             motivo_cierre = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
             operacion_ganada = True
 
@@ -95,12 +96,12 @@ def cierre_take_profit(beneficio_neto):
             motivo_cierre = f"Take Profit: ${beneficio_neto:.2f}"
 
             return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Compra" and parametros.valor_compra >= parametros.TAKE_PROFIT:
+    elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
         motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {parametros.TAKE_PROFIT}"
         operacion_ganada = True
 
         return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Venta" and parametros.valor_venta <= parametros.TAKE_PROFIT:
+    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
         motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {parametros.TAKE_PROFIT}"
         operacion_ganada = True
 

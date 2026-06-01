@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import configuracion.parametros as parametros
-from operaciones.ejecucion import ejecutar_operacion, validar_trailing_stop
+from operaciones.ejecucion import ejecutar_operacion, validar_trailing_stop, reevaluar_operacion
 from ui.interfaz import ui_trailing, ui_stop_loss, ui_operacion_activa, ui_general
 from extraccion.datos_xtb import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 from operaciones.cierre import operacion_debe_cerrar, ejecutar_cierre
@@ -87,7 +87,7 @@ def bot_scalping():
 
                 # Obtener los datos de las operaciones actuales
                 js_script_shadow = obtener_datos_operaciones()                
-                resultado_shadow = driver.execute_script(js_script_shadow)                
+                resultado_shadow = driver.execute_script(js_script_shadow)
                 operaciones_detalles = resultado_shadow["detalles"]
                 
                 total_posiciones = resultado_shadow["total"]
@@ -101,14 +101,22 @@ def bot_scalping():
                     if parametros.hora_apertura_orden is None:
                         parametros.hora_apertura_orden = time.time()
                         parametros.maximo_rendimiento_alcanzado = -999.0
-                    
+
                     extraer_datos_operacion(operaciones_detalles)
-                   
+
                     texto_stop_loss         = ui_stop_loss(True)
                     texto_trailing          = validar_trailing_stop()
                     texto_operacion_activa  = ui_operacion_activa(True)
 
                     ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
+
+                    # Si no se cierra, entonces validar si se debe ajustar
+                    if not ejecutar_cierre_operacion:
+                        accion, motivo = reevaluar_operacion()
+
+                        if accion == "Cerrar":
+                            ejecutar_cierre_operacion = True
+                            motivo_cierre = motivo
                 else:
                     texto_operacion_activa = ui_operacion_activa(False)
                     parametros.hora_apertura_orden = None
@@ -127,7 +135,7 @@ def bot_scalping():
                 # Ejecución automática de operaciones
                 if not parametros.bloqueo_ejecutar_orden and not operacion_activa:
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
+                    if not parametros.USAR_IA and time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
 
                     # Validar y abrir posicion en caso que se cumplan las condiciones
