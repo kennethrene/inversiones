@@ -192,10 +192,10 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
                 f" 🧭 TRAILING STOP\n"
                 f"  ───────────────────────────────────\n"
                 f"   🔥 Activado\n"
-                f"   🔥 Trailing Stop     : {parametros.TRAILING_STOP}\n"
-                f"   🔥 Distancia Máxima  : {parametros.DISTANCIA_TRAILING_MAXIMA}\n"
-                f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING}\n"
-                f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS}\n"
+                f"   🔥 Trailing Stop     : {parametros.TRAILING_STOP:.2f}\n"
+                f"   🔥 Distancia Máxima  : {parametros.DISTANCIA_TRAILING_MAXIMA:.2f}\n"
+                f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING:.2f}\n"
+                f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS:.2f}\n"
             )
 
 def ui_stop_loss(activo):
@@ -231,11 +231,11 @@ def ui_operacion_activa(activo):
             f"{texto_separador}\n"
             f"📌 [OPERACION]\n"
             f"  ───────────────────────────────────\n"
-            f"   Operación          : {parametros.datos_mapeados["Operacion"]}\n"
+            f"   Operación          : {parametros.datos_mapeados['Operacion']}\n"
             f"   💱 Instrumento     : {parametros.datos_mapeados['Activo']} ({parametros.datos_mapeados['Tipo']})\n"
             f"   📦 Volumen (Lotes) : {parametros.datos_mapeados['Volumen']}\n"
-            f"   🚀 Precio Apertura : {float(parametros.datos_mapeados['Precio Apertura'].replace(" ", ""))}\n"
-            f"   📊 Precio Actual   : {float(parametros.datos_mapeados['Precio Actual'].replace(" ", ""))}\n"
+            f"   🚀 Precio Apertura : {float(parametros.datos_mapeados['Precio Apertura'].replace(' ', ''))}\n"
+            f"   📊 Precio Actual   : {float(parametros.datos_mapeados['Precio Actual'].replace(' ', ''))}\n"
             f"   {icono_beneficio} Beneficio Neto  : {parametros.datos_mapeados['Beneficio Neto']} ({parametros.datos_mapeados['Beneficio %']})\n\n"
             f"   Log operación\n"
             f"  ───────────────────────────────────\n"
@@ -283,7 +283,7 @@ def ui_patrones():
         f" 🟢 ULTIMO PATRON DETECTADO : {parametros.ultimo_patron}\n\n"
         f"   Log operación\n"
         f"  ───────────────────────────────────"
-        f"   {parametros.datos_graficos["log"]}"
+        f"   {parametros.datos_graficos['log']}"
     )
 
 def indicador_habilitado(indicador):

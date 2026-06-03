@@ -83,33 +83,71 @@ client = genai.Client(api_key=secrets.GOOGLE_IA)
 
 def ejecutar_operacion():
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute)
-    datos_en_texto = json.dumps(velas)
+    datos_en_texto = formatear_velas_para_ia(velas)
 
     if velas != None and len(velas) > 0 :
         response = client.models.generate_content(
             model=parametros.MODELO_IA,
             contents=f"""
-            Estás actuando como un sistema automatizado de gestión de riesgos y monitoreo de operaciones en tiempo real de alta precisión cuantitativa.
-    
-            Analiza rigurosamente la siguiente serie temporal de precios OHLC ordenada cronológicamente:
-            {datos_en_texto}
+            Estás actuando como un Sistema Core de Ejecución Cuantitativa y Gestión de Riesgos de Alta Precisión. Tu función es procesar en el segundo cero del inicio de una nueva vela un arreglo cronológico de precios, calcular internamente métricas estadísticas, de volatilidad y la pendiente de la banda central, validar confluencias bajo reglas algebraicas estrictas y devolver una decisión operativa de apertura unívoca.
 
-            Reglas estrictas para estructurar la respuesta:
-            REGLAS ALGORÍTMICAS DE VALIDACIÓN POR TIPO DE PATRÓN:
-            1. GEOMETRÍA RÍGIDA (Doble Techo/Suelo, HCH): Exige simetría matemática rigurosa en los Highs y Lows de los picos y valles. Registra los valores exactos en `puntos_control_patron`. Si no hay simetría real o el precio rompe la línea de cuello de forma inversa, desestima el patrón y actúa para mitigar riesgo.
-            2. CONTINUACIÓN (Banderas, Cuñas): Exige una disminución progresiva del volumen durante la formación del canal. La ruptura solo es válida si el precio de CIERRE de la vela queda fuera de la estructura acompañado de un aumento de volumen. Si lateraliza más de 15 velas sin romper, invalida el patrón.
-            3. RECHAZO Y ESTRELLAS (Martillos, Martillos Invertidos, Estrellas Fugaces, Estrellas del Atardecer/Amanecer, Envolventes): 
-                Ignora estos patrones por completo si ocurren en rangos medios o zonas muertas. Solo son válidos si la mecha de rechazo (superior en estrellas fugaces/martillos invertidos; inferior en martillos) es al menos el doble del tamaño del cuerpo real de la vela y ocurre directamente sobre un nivel macro de Soporte, Resistencia o Fibonacci. Para patrones de tres velas (como la Estrella del Atardecer), exige rigurosamente que la tercera vela cierre cubriendo al menos el 50% de la primera vela para confirmar la reversión.
-            4. FILTRO DE FALSOS ROMPIMIENTOS (Fakeouts): Si una vela perfora un soporte/resistencia pero regresa y CIERRA dentro del rango dejando una mecha larga, clasifícalo como Fakeout. En este escenario, prioriza la acción de 'Cerrar' o ajustar el Stop Loss inmediatamente al extremo opuesto.
-            5. FILTRO DE TENDENCIA LATERAL (Rangos y Consolidación): Analiza si los máximos y mínimos de las últimas velas se mantienen dentro de un canal horizontal estrecho con compresión de volatilidad y volumen plano o descendente. Si el precio está en una tendencia lateral sin una ruptura confirmada, prohíbe abrir operaciones basadas en patrones de tendencia. En este escenario, la recomendación operativa debe ser 'Mantener', a menos que se identifique una estrategia clara de rebote en los extremos exactos del rango (Soporte/Resistencia del canal).
+            ### CONTEXTO Y ENTRADA DE DATOS
+            - Temporalidad: 5 minutos por vela (M5).
+            - Ventana de observación: Últimas 60 velas cerradas (ordenadas cronológicamente de la más antigua a la más reciente). La última vela define el precio actual del mercado.
+            - Datos de Precios suministrados: 
+            * Serie temporal OHLC: {datos_en_texto}
 
-            REGLAS ESTRICTAS DE EVALUACIÓN:
-            1. Identifica el 'precio_entrada' óptimo basándote en la última estructura de precios analizada para maximizar la probabilidad de acierto.
-            2. Si la acción recomendada es 'Comprar', calcula el 'take_profit' y el 'trailing_stop_activation' por encima de este precio de entrada, y el 'stop_loss' por debajo.
-            3. Si la acción recomendada es 'Vender', realiza los cálculos inversos de manera matemática y precisa.
-            4. Identifica el nombre técnico formal del patrón de velas o chartista presente en los datos y determina la decisión operativa final.
-            5. Ajusta los niveles de 'take_profit', 'stop_loss' y 'trailing_stop_activation' proporcionalmente según el nivel de fiabilidad detectado, optimizando siempre la relación Riesgo/Beneficio para minimizar las pérdidas potenciales y maximizar el recorrido de las ganancias.
-            6. Calcula en el campo velas_espera_validacion la cantidad óptima de velas que el sistema debe esperar para volver a ejecutar este script para revalidar la decisión tomada. Básate en la volatilidad actual y en la distancia de los precios objetivo; por ejemplo, si el precio está muy cerca del Stop Loss o Take Profit, el número de velas debe ser bajo.
+            ### INSTRUCCIONES DE PRECALCULO OPERATIVO E INDICADORES INTERNOS
+            Antes de evaluar cualquier patrón, debes realizar un análisis estadístico estricto sobre el arreglo para calcular tus métricas de referencia:
+            1. Banda Central Actual (Media Móvil): Calcula el precio promedio de cierre de las últimas 20 velas del set de datos (Velas 41 a 60).
+            2. Banda Central Previa (Punto de Comparación): Calcula el precio promedio de cierre de las 20 velas anteriores que finalizan 5 velas atrás (Velas 36 a 55).
+            3. Pendiente / Inclinación de la Tendencia: Resta [Banda Central Actual - Banda Central Previa]:
+            - Pendiente Alcista Fuerte: Si el resultado es positivo y es mayor a 0.5x de tu "Vela Promedio" (VP).
+            - Pendiente Bajista Fuerte: Si el resultado es negativo y su valor absoluto es mayor a 0.5x de tu "Vela Promedio" (VP).
+            - Pendiente Plana / Neutra: Si el resultado se mantiene en un rango comprimido intermedio, indicando falta de fuerza tendencial.
+            4. Rango de Volatilidad de Bandas: Define la Banda Superior en el máximo local de las últimas 20 velas y la Banda Inferior en el mínimo local de las últimas 20 velas.
+            5. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 10 velas de todo el arreglo.
+
+            ### REGLAS ALGORÍTMICAS DE VALIDACIÓN DE ENTRADAS CON FILTRO DE INCLINACIÓN
+
+            1. GEOMETRÍA RÍGIDA (Doble Techo/Suelo, HCH):
+            - Exige una tolerancia máxima de ±0.05% de diferencia matemática en los extremos.
+            - Restricción de Pendiente: Prohíbe operar patrones de reversión (Doble Techo o HCH) si la Pendiente de la Banda Central sigue clasificada como "Alcista Fuerte", ya que la inercia del mercado anula el patrón. Exige que la pendiente sea Neutra/Plana para validar el giro.
+
+            2. CONTINUACIÓN (Banderas, Cuñas):
+            - Exige compresión matemática del rango antes de la ruptura.
+            - Confluencia de Pendiente obligatoria: Solo se permite una entrada en "Comprar" en banderas si la Pendiente es "Alcista Fuerte". Solo se permite "Vender" en cuñas/banderas si la Pendiente es "Bajista Fuerte". Si la pendiente es plana, descarta el patrón de continuación.
+
+            3. CONFLUENCIA DE RECHAZO Y BANDAS DE BOLLINGER INTERNAS:
+            - Ignora por completo patrones de rechazo en zonas medias.
+            - COMPRA: El patrón de rechazo alcista debe tocar la Banda Inferior calculada Y la Pendiente debe ser Neutra o Alcista. Prohibido comprar si la Pendiente es "Bajista Fuerte" (no operes contra el flujo).
+            - VENTA: El patrón de rechazo bajista debe tocar la Banda Superior calculada Y la Pendiente debe ser Neutra o Bajista. Prohibido vender si la Pendiente es "Alcista Fuerte".
+
+            4. FILTRO DE FALSOS ROMPIMIENTOS (Fakeouts):
+            - Si la última vela perforó tu Banda Superior o Inferior pero regresó y CERRÓ dentro del rango previo dejando una mecha larga, clasifícalo como "Fakeout".
+            - Gatillo de Reversión: Si ocurre en la Banda Inferior con pendiente plana/neutra, la acción es "Comprar". Si ocurre en la Banda Superior con pendiente plana/neutra, es "Vender". El Stop Loss se coloca en el extremo exacto de la mecha.
+
+            5. FILTRO DE TENDENCIA LATERAL (Compresión de Bandas):
+            - Si la distancia total entre tu Banda Superior e Inferior calculada es menor a 2.5 veces tu VP, O la Pendiente es estrictamente "Plana / Neutra", el mercado está en consolidación.
+            - Prohíbe operaciones de ruptura. Permite únicamente operaciones de reversión rápida a la media en los extremos exactos de las bandas externas buscando la banda central. Si el precio está cerca de la banda central, la acción obligatoria es "Mantener".
+
+            ### REGLAS DE TRAILING STOP Y PROTECCIÓN DE BENEFICIOS (REALISTA)
+            1. ACTIVACIÓN DEL TRAILING STOP: Establece `trailing_stop_activation` a una distancia matemática de EXACTAMENTE 1.2 veces tu "Vela Promedio" (VP) a favor de la operación desde el precio de entrada.
+            2. PRECIO DE PROTECCIÓN INICIAL Y SEGUIMIENTO:
+            - Al tocar el `trailing_stop_activation`, el Stop Loss debe moverse a una zona segura: [Precio de Entrada + 0.3x VP] en Compras, o [Precio de Entrada - 0.3x VP] en Ventas, asegurando un beneficio base real.
+            - A partir de ahí, la distancia de seguimiento por trailing será de 1.2x VP.
+
+            ### REGLAS ESTRICTAS DE EVALUACIÓN OPERATIVA Y PLANIFICACIÓN DE AUDITORÍA
+            1. Precio de Entrada: Será exactamente el precio de CIERRE de la última vela (mercado instantáneo).
+            2. Direcciones permitidas: "Comprar", "Vender", "Mantener".
+            3. Consistencia de Signos:
+            - Si "Comprar": `take_profit` y `trailing_stop_activation` > `precio_entrada`. `stop_loss` < `precio_entrada`.
+            - Si "Vender": `take_profit` y `trailing_stop_activation` < `precio_entrada`. `stop_loss` > `precio_entrada`.
+            4. Take Profit Objetivo: Distancia de entre 1.5x y 2.0x VP, o hazlo coincidir con la Banda de Bollinger opuesta si el mercado está en fase lateral.
+            5. Cálculo Dinámico de Ventana de Auditoría (`velas_espera_validacion`): Número entero de 1 al 12:
+            - Asigna de 1 a 2 velas ante alta volatilidad o ruptura inminente de bandas.
+            - Asigna de 3 a 6 velas si se opera con Pendiente Fuerte (Alcista/Bajista) a favor de la tendencia.
+            - Asigna de 6 a 12 velas si la Pendiente es estrictamente Plana/Neutra.
             """,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -127,14 +165,15 @@ def ejecutar_operacion():
         trailing_stop = resultado["trailing_stop_activation"]
         valor_entrada = resultado["precio_entrada"]
         velas_espera_validacion = resultado["velas_espera_validacion"]
+        puntos_control = resultado["puntos_control_patron"]
 
-        return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera_validacion
+        return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera_validacion, puntos_control
     else:
         parametros.error = "No hay datos para analizar"
 
 def reevaluar_operacion():
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute)
-    datos_en_texto = json.dumps(velas)
+    datos_en_texto = formatear_velas_para_ia(velas)
 
     if velas != None and len(velas) > 0 :
         # Ajustar valores para TradingView (cuyos valores son mas bajos que XTB)
@@ -146,36 +185,76 @@ def reevaluar_operacion():
         response = client.models.generate_content(
             model=parametros.MODELO_IA,
             contents=f"""
-            Estás actuando como un sistema automatizado de gestión de riesgos y monitoreo de operaciones en tiempo real.
-            
-            Tu objetivo es evaluar si una posición de trading abierta previamente sigue siendo válida o si las nuevas velas de precio ({datos_en_texto}) exigen proteger el capital de forma inmediata.
+            Estás actuando como un Auditor Cuantitativo de Riesgos y Administrador de Posiciones en Tiempo Real. Tu única función es evaluar una operación abierta previamente, analizar el desarrollo del precio a través de una nueva serie temporal de 60 velas M5 cruzando los datos con los cálculos matemáticos y cualitativos del análisis original, y dictaminar si la posición debe mantenerse, cerrarse inmediatamente o ajustar sus parámetros de riesgo.
 
-            DATOS DE LA POSICIÓN ABIERTA ACTUALMENTE:
+            ### 1. DATOS DE LA POSICIÓN ABIERTA ACTUALMENTE Y CÁLCULOS DEL PRIMER PROMPT
             - Dirección original: {parametros.datos_mapeados['Operacion']}
-            - Precio de entrada: {precio_apertura_ajustado}
-            - Take Profit actual: {take_profit_ajustado}
-            - Stop Loss actual: {stop_loss_ajustado}
-            - Trailing Stop actual: {trailing_stop_ajustado}
-            - Estado de rendimiento actual: {parametros.datos_mapeados['Beneficio Neto']}
-            - Patrón identificado: {parametros.datos_mapeados["Patron"]}
+            - Precio de entrada original: {precio_apertura_ajustado}
+            - Take Profit original: {take_profit_ajustado}
+            - Stop Loss original: {stop_loss_ajustado}
+            - Trailing Stop original: {trailing_stop_ajustado}
+            - Beneficio Neto actual: {parametros.datos_mapeados['Beneficio Neto']}
+            - Patrón identificado previamente: {parametros.datos_mapeados["Patron"]}
+            - Justificación técnica previa: {parametros.explicacion_decision}
 
-            REGLAS ALGORÍTMICAS DE VALIDACIÓN POR TIPO DE PATRÓN:
-            1. GEOMETRÍA RÍGIDA (Doble Techo/Suelo, HCH, HCH Invertido): Exige simetría matemática rigurosa en los Highs y Lows de los picos y valles. Registra los valores exactos en `puntos_control_patron`. Si no hay simetría real o el precio rompe la línea de cuello de forma inversa, desestima el patrón y actúa para mitigar riesgo.
-            2. CONTINUACIÓN (Banderas, Cuñas): Exige una disminución progresiva del volumen durante la formación del canal. La ruptura solo es válida si el precio de CIERRE de la vela queda fuera de la estructura acompañado de un aumento de volumen. Si lateraliza más de 15 velas sin romper, invalida el patrón.
-            3. RECHAZO Y ESTRELLAS (Martillos, Martillos Invertidos, Estrellas Fugaces, Estrellas del Atardecer/Amanecer, Envolventes): 
-                Ignora estos patrones por completo si ocurren en rangos medios o zonas muertas. Solo son válidos si la mecha de rechazo (superior en estrellas fugaces/martillos invertidos; inferior en martillos) es al menos el doble del tamaño del cuerpo real de la vela y ocurre directamente sobre un nivel macro de Soporte, Resistencia o Fibonacci. Para patrones de tres velas (como la Estrella del Atardecer), exige rigurosamente que la tercera vela cierre cubriendo al menos el 50% de la primera vela para confirmar la reversión.
-            4. FILTRO DE FALSOS ROMPIMIENTOS (Fakeouts): Si una vela perfora un soporte/resistencia pero regresa y CIERRA dentro del rango dejando una mecha larga, clasifícalo como Fakeout. En este escenario, prioriza la acción de 'Cerrar' o ajustar el Stop Loss inmediatamente al extremo opuesto.
-            5. FILTRO DE TENDENCIA LATERAL (Rangos y Consolidación): Analiza si los máximos y mínimos de las últimas velas se mantienen dentro de un canal horizontal estrecho con compresión de volatilidad y volumen plano o descendente. Si el precio está en una tendencia lateral sin una ruptura confirmada, prohíbe abrir operaciones basadas en patrones de tendencia. En este escenario, la recomendación operativa debe ser 'Mantener', a menos que se identifique una estrategia clara de rebote en los extremos exactos del rango (Soporte/Resistencia del canal).
+            ### 2. NUEVA ENTRADA DE DATOS (M5 - 60 VELAS ACTUALIZADAS)
+            - Serie temporal OHLC actual (la última fila es la vela actual '0' recién cerrada y define el precio de mercado actual):
+            {datos_en_texto}
 
-            REGLAS ESTRICTAS DE EVALUACIÓN:
-            1. Analiza si las nuevas velas muestran una invalidación del patrón original, un cambio de tendencia repentino, pérdida de volumen o divergencias peligrosas.
-            2. Determina la 'reevaluacion' bajo los siguientes criterios:
-            - 'Mantener': Si el precio se mueve a favor o la estructura sigue siendo técnicamente sólida. Los niveles actuales se quedan igual.
-            - 'Cerrar': Si hay señales claras de reversión en contra, velas de rechazo fuerte en zonas clave, o si la ganancia actual corre un riesgo alto de borrarse.
-            - 'Ajustar': Si el precio ha avanzado a favor y permite asegurar ganancias subiendo el Stop Loss (Break-even / Profit-lock) o ajustando el Take Profit debido a una nueva resistencia/soporte.
-            3. Si la decisión es 'AJUSTAR_NIVELES', calcula matemáticamente los nuevos parámetros de salida basándote estrictamente en la nueva acción del precio. Si la decisión es otra, devuelve estos campos como null.
-            4. Sé extremadamente conservador: ante la menor duda de reversión de tendencia con pérdidas potenciales, prioriza 'Cerrar' o asegurar ganancias.
-            7. Calcula en el campo velas_espera_validacion la cantidad óptima de velas que el sistema debe esperar para volver a ejecutar este script para revalidar la decisión tomada. Básate en la volatilidad actual y en la distancia de los precios objetivo; por ejemplo, si el precio está muy cerca del Stop Loss o Take Profit, el número de velas debe ser bajo.
+            ### 3. INSTRUCCIONES DE PRECALCULO OPERATIVO E INDICADORES INTERNOS
+            Antes de evaluar cualquier regla, debes realizar un análisis estadístico estricto sobre el arreglo de datos para calcular tus métricas de referencia:
+            1. Banda Central Actual (Media Móvil): Calcula el precio promedio de cierre de las últimas 20 velas del set de datos (Velas 41 a 60).
+            2. Banda Central Previa (Punto de Comparación): Calcula el precio promedio de cierre de las 20 velas anteriores que finalizan 5 velas atrás (Velas 36 a 55).
+            3. Pendiente / Inclinación de la Tendencia: Resta [Banda Central Actual - Banda Central Previa]:
+            - Pendiente Alcista Fuerte: Si el resultado es positivo y es mayor a 0.5x de tu "Vela Promedio" (VP).
+            - Pendiente Bajista Fuerte: Si el resultado es negativo y su valor absoluto es mayor a 0.5x de tu "Vela Promedio" (VP).
+            - Pendiente Plana / Neutra: Si el resultado se mantiene en un rango comprimido intermedio, indicando falta de fuerza tendencial.
+            4. Rango de Volatilidad de Bandas: Define la Banda Superior en el máximo local de las últimas 20 velas y la Banda Inferior en el mínimo local de las últimas 20 velas.
+            5. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 10 velas de todo el arreglo.
+
+            ### 4. REGLAS ALGORÍTMICAS DE VALIDACIÓN DE ENTRADAS CON FILTRO DE INCLINACIÓN (PARA AUDITORÍA)
+            Utiliza estas reglas de la estrategia raíz para verificar si el precio actual ha violado las condiciones de validez estructural de la operación activa:
+
+            1. GEOMETRÍA RÍGIDA (Doble Techo/Suelo, HCH):
+            - Exige una tolerancia máxima de ±0.05% de diferencia matemática en los extremos.
+            - Restricción de Pendiente: Si la operación original es una reversión (Doble Techo o HCH) pero la Pendiente de la Banda Central calculada sigue clasificada como "Alcista Fuerte" o "Bajista Fuerte" en contra de la operación, la inercia anula el patrón. La estructura es inválida.
+
+            2. CONTINUACIÓN (Banderas, Cuñas):
+            - Exige compresión matemática del rango antes de la ruptura.
+            - Confluencia de Pendiente obligatoria: Una posición de COMPRA en bandera solo es válida si la Pendiente es "Alcista Fuerte". Una posición de VENTA en cuña/bandera solo es válida si la Pendiente es "Bajista Fuerte". Si la pendiente se aplanó, la continuación perdió validez.
+
+            3. CONFLUENCIA DE RECHAZO Y BANDAS DE BOLLINGER INTERNAS:
+            - Ignora por completo patrones de rechazo en zonas medias.
+            - COMPRA: El patrón de rechazo alcista debe tocar la Banda Inferior calculada Y la Pendiente debe ser Neutra o Alcista. Es inválido si la Pendiente es "Bajista Fuerte".
+            - VENTA: El patrón de rechazo bajista debe tocar la Banda Superior calculada Y la Pendiente debe ser Neutra o Bajista. Es inválido si la Pendiente es "Alcista Fuerte".
+
+            4. FILTRO DE FALSOS ROMPIMIENTOS (Fakeouts Inversos de Salida):
+            - Si la última vela perforó tu Banda Superior o Inferior pero regresó y CERRÓ dentro del rango previo dejando una mecha larga, clasifícalo como "Fakeout".
+            - Aplicación en Auditoría: Si este Fakeout ocurre en la banda opuesta a tu operación activa (ej. estás comprado y hay un Fakeout bajista en la Banda Superior), utilízalo como señal de salida forzada. La estructura original fue vulnerada y debes proteger el capital.
+
+            5. FILTRO DE TENDENCIA LATERAL (Compresión de Bandas):
+            - Si la distancia total entre tu Banda Superior e Inferior calculada es menor a 2.5 veces tu VP, O la Pendiente es estrictamente "Plana / Neutra", el mercado está en consolidación.
+            - En este escenario se prohíben rupturas. Solo son válidas operaciones de reversión rápida a la media en los extremos exactos de las bandas externas buscando la banda central. Si el precio se estanca cerca de la banda central, la orden activa perdió su momentum.
+
+            ### 5. ALGORITMO DE AUDITORÍA OPERATIVA (DECISIÓN DE REEVALUACIÓN)
+            Cruza los hallazgos de las secciones 3 y 4 con el [Beneficio Neto actual] para determinar el dictamen final de `reevaluacion`:
+
+            1. REGLA PARA 'Cerrar' (Liquidación Inmediata a Mercado):
+            - Si la regla de Geometría Rígida, Continuación o Rechazo ha sido declarada INVÁLIDA por un cambio violento en la Pendiente de la Banda Central en tu contra, dicta 'Cerrar'.
+            - Si se activa un Fakeout Inverso en la banda opuesta según el punto 4 de la sección anterior, dicta 'Cerrar' inmediatamente para asegurar el [Beneficio Neto actual] positivo antes del retroceso.
+            - Si el precio ha alcanzado el 80% del recorrido hacia tu [Take Profit original] pero el mercado entra en Compresión de Bandas (Tendencia Lateral), dicta 'Cerrar' para tomar ganancias manuales y liberar margen.
+
+            2. REGLA PARA 'Ajustar' (Modificación de Niveles Pasivos):
+            - Si el [Beneficio Neto actual] es positivo y el precio avanzó a favor superando el [Precio de entrada original] por una distancia de 1.0x VP, pero aún no activa mecánicamente el [Trailing Stop original], dicta 'Ajustar'. Recomienda elevar el `stop_loss` al precio de entrada (Breakeven) + un colchón de 0.3x VP.
+            - Si la posición está en una fase de Pendiente Plana / Neutra (Tendencia Lateral) por más de 7 velas sin fuerza para alcanzar el [Take Profit original], dicta 'Ajustar' y reduce tu Take Profit acercándolo al precio de Cierre actual para forzar una salida exitosa.
+
+            3. REGLA PARA 'Mantener' (Sin Cambios en el Broker):
+            - Si las confluencias que originaron la posición siguen siendo 100% válidas, las bandas se expanden a favor y la Pendiente ratifica la dirección original de la orden, dicta 'Mantener'. Los precios objetivo permanecen intactos.
+
+            ### 6. REGLAS PARA CAMPOS DE RETORNO Y CONSISTENCIA PYDANTIC
+            - `reevaluacion`: Campo crítico de control operativo. Debe ser estrictamente uno de estos tres literales: "Mantener", "Cerrar" o "Ajustar", aplicando las reglas de la sección 5.
+            - `precio_entrada`: Debe ser EXACTAMENTE el precio de 'Close' de la última vela (Vela 0) del set de datos provisto.
+            - `velas_espera_validacion`: Calcula un entero entre 1 y 10. Si dictas 'Ajustar' o el mercado está muy volátil, reduce el valor a 1 o 2 velas.
             """,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -193,8 +272,32 @@ def reevaluar_operacion():
         trailing_stop = resultado["trailing_stop_activation"]
         valor_entrada = resultado["precio_entrada"]
         velas_espera_validacion = resultado["velas_espera_validacion"]
+        puntos_control = resultado["puntos_control_patron"]
 
-        return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera_validacion
+        return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera_validacion, puntos_control
     else:
         parametros.error = "No hay datos para analizar"
+
+def formatear_velas_para_ia(datos):
+    # Crear el encabezado para guiar la lectura del modelo
+    lineas = ["Vela,Open,High,Low,Close"]
+    
+    # Obtener el total de velas en el arreglo
+    total_velas = len(datos)
+    
+    for i in range(total_velas):
+        # Calculamos el índice inverso para que la IA sepa el orden cronológico.
+        # La vela más antigua será la Vela -59 y la que acaba de cerrar será la Vela 0.
+        indice_ia = -(total_velas - 1 - i)
+        
+        open_p  = datos[i]['Open']
+        high_p  = datos[i]['High']
+        low_p   = datos[i]['Low']
+        close_p = datos[i]['Close']
+        
+        lineas.append(f"{indice_ia},{open_p},{high_p},{low_p},{close_p}")
+
+        
+    # Unir todo en un solo string de texto plano separado por saltos de línea
+    return "\n".join(lineas)
 

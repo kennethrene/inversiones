@@ -60,6 +60,7 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # ============================================================================
 USAR_IA = True
 MODELO_IA ="gemini-3.1-flash-lite" #'gemini-3.5-flash',
+explicacion_decision = ""
 
 CRITERIO1 = False
 CRITERIO2 = False
