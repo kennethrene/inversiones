@@ -4,7 +4,6 @@ import time
 import configuracion.parametros as parametros
 
 texto_separador = "-" * 75
-comando_limpiar = 'cls' if os.name == 'nt' else 'clear'
 
 def ui_macd(parent_text_content, texto_componente, historico, texto_macd_actual):
     if indicador_habilitado("MACD") and "MACD" in parent_text_content and "." in texto_componente:
@@ -87,7 +86,7 @@ def ui_rsi(parent_text_content, texto_componente, historico, texto_rsi_actual):
     return texto_rsi_actual
 
 def ui_adx(parent_text_content, texto_componente, texto_adx_actual):
-    if "ADX" in parent_text_content:
+    if indicador_habilitado("ADX") and "ADX" in parent_text_content:
         decimales_adx = re.findall(r'-?\d+\.\d+|-?\d+', texto_componente)
         if decimales_adx:
             parametros.valor_adx = float(decimales_adx[0])
@@ -117,7 +116,7 @@ def ui_adx(parent_text_content, texto_componente, texto_adx_actual):
     return texto_adx_actual
 
 def ui_volumen(parent_text_content, texto_componente, texto_volumen_actual):
-    if "VOL" in parent_text_content:
+    if indicador_habilitado("VOL") and "VOL" in parent_text_content:
         if texto_componente != "n/a":
             parametros.valor_volumen = int(texto_componente)
             return (
@@ -287,9 +286,6 @@ def ui_patrones():
     )
 
 def indicador_habilitado(indicador):
-    if parametros.USAR_IA:
-        return False
-
     num_criterio = 0
 
     for criterio in parametros.CRITERIO_INDICADORES:
@@ -307,7 +303,7 @@ def indicador_habilitado(indicador):
 
 # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
 def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre):
-    os.system(comando_limpiar)
+    limpiar_pantalla()
     print("-" * 75)
     print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
     print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
@@ -324,3 +320,10 @@ def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, text
     print("=" * 75)
     print(f" 🔴 Ultimo error              : {parametros.error}")
     print("=" * 75)
+
+def limpiar_pantalla():
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        # Funciona en Mac (Terminal nativa, VS Code, iTerm2) y Linux
+        print("\033[H\033[2J\033[3J", end="", flush=True)

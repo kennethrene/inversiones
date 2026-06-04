@@ -10,20 +10,21 @@ def operacion_debe_cerrar():
 
     ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_stop_loss(parametros.rendimiento_actual)    
     
-    if not ejecutar_cierre:          
-        if parametros.trailing_activado:
-            ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_trailing_stop(parametros.maximo_rendimiento_alcanzado, parametros.rendimiento_actual)
+    if not ejecutar_cierre and parametros.trailing_activado:
+        ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_trailing_stop(parametros.maximo_rendimiento_alcanzado, parametros.rendimiento_actual
+    )
 
+    if not ejecutar_cierre:
+        beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
+        
+        ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_take_profit(beneficio_neto)
+        
         if not ejecutar_cierre:
-            beneficio_neto =  float(parametros.datos_mapeados['Beneficio Neto'])
-            ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_take_profit(beneficio_neto)
+            ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_rsi_inminente(beneficio_neto)
             
             if not ejecutar_cierre:
-                ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_rsi_inminente(beneficio_neto)
+                ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_macd_inminente(beneficio_neto)
 
-                if not ejecutar_cierre:
-                    ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_macd_inminente(beneficio_neto)
-    
     return ejecutar_cierre, operacion_ganada, motivo_cierre
 
 def ejecutar_cierre(driver, motivo_cierre):
@@ -37,13 +38,6 @@ def ejecutar_cierre(driver, motivo_cierre):
         # 🔥 REGISTRAR EL TIEMPO EXACTO DEL CIERRE
         parametros.TIEMPO_ULTIMO_CIERRE = time.time()
 
-        parametros.maximo_rendimiento_alcanzado = 0.0
-        parametros.TRAILING_STOP = 15.0
-        parametros.DISTANCIA_TRAILING_MAXIMA = 4.0
-        parametros.TAKE_PROFIT = 5.0
-        parametros.STOP_LOSS  = -10.0
-        parametros.trailing_activado = False
-
         # Sincronizador de estadísticas con lectura de resultados reales
         if beneficio_neto > 0:
             actualizar_ultima_operacion(parametros.datos_mapeados, "Ganada", motivo_cierre)
@@ -51,9 +45,15 @@ def ejecutar_cierre(driver, motivo_cierre):
         else:
             actualizar_ultima_operacion(parametros.datos_mapeados, "Perdida", motivo_cierre)
             actualizar_estadisticas_cierre(False)
+        
+        parametros.maximo_rendimiento_alcanzado = 0.0
+        parametros.TRAILING_STOP = 15.0
+        parametros.DISTANCIA_TRAILING_MAXIMA = 4.0
+        parametros.TAKE_PROFIT = 3.5
+        parametros.STOP_LOSS  = -7.5
+        parametros.trailing_activado = False
 
-        if not parametros.USAR_IA:
-            time.sleep(5)
+        time.sleep(2)
     except Exception as error_ejecucion:
         parametros.error = traceback.format_exc()
 

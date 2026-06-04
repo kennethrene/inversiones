@@ -6,15 +6,16 @@ DEBUG = False # En True no realiza ninguna operación ... solo se conecta y mues
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
-CARGAR_DATOS = False
+CARGAR_DATOS = True
 PRELOAD_HISTORICO_VOLUMEN =  [5000, 5000, 5492, 3817, 5425, 2564]
 PRELOAD_HISTORICO_MACD =  [7.91, 7.64, 5.06]
-PRELOAD_HISTORICO_RSI = [55, 31]
+PRELOAD_HISTORICO_RSI = [22, 17]
 PRELOAD_PROMEDIO_VOLUMEN = 5000
 PRELOAD_PROMEDIO_VOLUMEN_SIN_ACTUAL = 5000
 PRELOAD_VALOR_COMPRA_ABRIO = 0
 PRELOAD_VALOR_VENTA_ABRIO = 0
 
+CARGAR_DATOS_OPERACION = False
 PRELOAD_ACTIVO_ACTUAL = "US100"
 PRELOAD_OPERACION = 'Compra'
 PRELOAD_PRECIO_APERTURA = 30580.79
@@ -59,15 +60,44 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS
 # ============================================================================
 USAR_IA = True
-MODELO_IA ="gemini-3.1-flash-lite" #'gemini-3.5-flash',
+MODELO_IA = "gemini-3.1-flash-lite" #'gemini-3.5-flash',
+TIPO_PROMPT = {
+    "Patrones": {
+        "activo": True,
+        "inicial": "PROMPT_PATRONES",
+        "inicial_inputs": ["datos"],
+        "auditoria": "PROMPT_PATRONES_REEVALUACION",
+        "auditoria_inputs": [
+            "operacion", "precio_apertura", "take_profit", "stop_loss", 
+            "trailing_stop", "beneficio_neto", "patron", "explicacion", "datos"
+        ]
+    },
+    "Indicadores": {
+        "activo": False,
+        "inicial": "to do",
+        "auditoria": "to do"
+    },
+    "PatronesIndicadores": {
+        "activo": False,
+        "inicial": "PROMPT_PATRONES_INDICADORES",
+        "inicial_inputs": ["datos"],
+        "auditoria": "PROMPT_PATRONES_INDICADORES_REEVALUACION",
+        "auditoria_inputs": [
+            "operacion", "precio_apertura", "take_profit", "stop_loss", 
+            "trailing_stop", "beneficio_neto", "patron", "explicacion", "datos"
+        ]
+    }
+}
+
 explicacion_decision = ""
 
 CRITERIO1 = False
 CRITERIO2 = False
-CRITERIO3 = True
+CRITERIO3 = False
 CRITERIO4 = False
 CRITERIO5 = False
 CRITERIO6 = True # Extremo
+CRITERIO7 = True # IA
 
 CRITERIO_INDICADORES = [
     {},
@@ -110,6 +140,13 @@ CRITERIO_INDICADORES = [
         # 6
         "MACD": False,
         "RSI": False,
+        "BOLLINGER": False,
+        "EMA": False
+    },
+    {
+        # 7
+        "MACD": False,
+        "RSI": True,
         "BOLLINGER": False,
         "EMA": False
     }

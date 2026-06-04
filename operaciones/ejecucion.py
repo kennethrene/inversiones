@@ -197,7 +197,13 @@ def reevaluar_operacion():
                 guardar_estadistica("Ajuste")
                 return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
             else:
-                parametros.log_operacion = f"ℹ️  IA recomienda mantener {accion}"
+                hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
+                
+                parametros.log_operacion = (
+                    f"ℹ️  IA recomienda mantener\n"
+                    f"      Explicación         : {explicacion}\n"
+                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})"
+                )
     
     return "", ""
 

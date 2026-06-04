@@ -1,5 +1,7 @@
 import configuracion.parametros as parametros
 from selenium.webdriver.common.by import By
+import traceback
+import time
 from ui.interfaz import ui_adx, ui_macd, ui_rsi, ui_ema, ui_volumen, ui_bollinger
 
 texto_macd = ""
@@ -10,7 +12,9 @@ texto_ema = ""
 texto_bollinger = ""
 
 def precargar_datos():
-    if (parametros.CARGAR_DATOS):
+    global texto_adx, texto_ema, texto_rsi, texto_bollinger, texto_volumen, texto_macd
+
+    if parametros.CARGAR_DATOS:
         parametros.historico_macd = parametros.PRELOAD_HISTORICO_MACD
         parametros.historico_rsi = parametros.PRELOAD_HISTORICO_RSI
         parametros.historico_volumen = parametros.PRELOAD_HISTORICO_VOLUMEN
@@ -18,7 +22,8 @@ def precargar_datos():
         parametros.promedio_volumen = parametros.PRELOAD_PROMEDIO_VOLUMEN
         parametros.valor_compra_abrio = parametros.PRELOAD_VALOR_COMPRA_ABRIO
         parametros.valor_venta_abrio = parametros.PRELOAD_VALOR_VENTA_ABRIO
-        
+    
+    if parametros.CARGAR_DATOS_OPERACION:
         parametros.activo_actual = parametros.PRELOAD_ACTIVO_ACTUAL
         parametros.datos_mapeados['Operacion'] = parametros.PRELOAD_OPERACION
         parametros.datos_mapeados['Precio Apertura'] = parametros.PRELOAD_PRECIO_APERTURA
@@ -31,6 +36,8 @@ def precargar_datos():
         parametros.CARGAR_DATOS = False
 
 def obtener_texto_indicadores(elementos_indicadores):
+    global texto_adx, texto_ema, texto_rsi, texto_bollinger, texto_volumen, texto_macd
+
     for elemento in elementos_indicadores:
         try:
             if elemento.is_displayed():
@@ -46,18 +53,17 @@ def obtener_texto_indicadores(elementos_indicadores):
                 texto_volumen = ui_volumen(parent_text_content, texto_componente, texto_volumen)
                 texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
                 texto_bollinger = ui_bollinger(parent_text_content, texto_componente, texto_bollinger)
-
-                return (
-                    f"{texto_macd}\n"
-                    f"{texto_rsi}\n"
-                    f"{texto_adx}\n"
-                    f"{texto_volumen}\n"
-                    f"{texto_ema}\n"
-                    f"{texto_bollinger}"
-                )
-        except: continue
-    
-    return ""
+        except Exception as e_bucle:
+                    parametros.error = traceback.format_exc()
+                    time.sleep(0.1)
+    return (
+        f"{texto_macd}\n"
+        f"{texto_rsi}\n"
+        f"{texto_adx}\n"
+        f"{texto_volumen}\n"
+        f"{texto_ema}\n"
+        f"{texto_bollinger}"
+    )
 
 def actualizar_informacion():
     parametros.valor_compra_abrio = parametros.valor_compra
