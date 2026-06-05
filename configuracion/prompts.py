@@ -217,6 +217,17 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
    - Solo son válidos en los extremos absolutos del rango de 60 velas.
    - Patrón Envolvente: El cuerpo real de la Vela 0 debe cubrir completamente (100% o más) el cuerpo real de la Vela -1 en dirección opuesta.
 
+5. PATRÓN DE AUSENCIA DE RECHAZO EN EXTREMOS (Ruptura por Absorción / Momentum):
+   - UBICACIÓN MACRO: Solo es válido si ocurre cuando el precio de CIERRE de la Vela 0 rompe y cierra estrictamente POR FUERA del Máximo o Mínimo Absoluto de las 60 velas.
+   - VALIDACIÓN MATEMÁTICA DE AUSENCIA DE RECHAZO: 
+     * Para Continuación Alcista (Ruptura de Máximo): La mecha superior de la Vela 0 debe ser prácticamente inexistente, con un tamaño estrictamente ≤ 0.1x del cuerpo real de la vela. El cuerpo debe ser alcista.
+     * Para Continuación Bajista (Ruptura de Mínimo): La mecha inferior de la Vela 0 debe ser prácticamente inexistente, con un tamaño estrictamente ≤ 0.1x del cuerpo real de la vela. El cuerpo debe ser bajista.
+   - FILTRO DE VOLUMEN/MOMENTUM CON VP: El cuerpo real de la Vela 0 (Close - Open) debe ser estrictamente ≥ 1.2x tu "Vela Promedio" (VP). Esto garantiza que la ruptura se hace con intención y no por agotamiento.
+   - CASOS OPERATIVOS CIENTÍFICOS:
+     * COMPRA (Gatillo Alcista): Si la Vela 0 cierra por encima del Máximo Absoluto con mecha superior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
+     * VENTA (Gatillo Bajista): Si la Vela 0 cierra por debajo del Mínimo Absoluto con mecha inferior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
+
+
 ### REGLAS DE EVALUACIÓN OPERATIVA Y GESTIÓN DE RIESGO
 1. Filtro de Ausencia de Patrón o Consolidación: Si el mercado está en tendencia lateral, o si no se cumple el 100% de los requisitos algebraicos de los patrones, establece obligatoriamente `accion_sugerida` como "Mantener" y `patron_detectado` como "Ninguno".
 2. Precio de Entrada: Será exactamente el precio de CIERRE de la última vela (Vela 0).
@@ -231,6 +242,7 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
 
 6. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
 - Determina con criterio conservador un número entero estrictamente entre 1 y 4 (máximo) para programar cuándo debe despertar el segundo prompt auditor para revisar esta entrada.
+- Asigna 1 vela (5 minutos): Si la entrada fue gatillada por un Patrón de Ausencia de Rechazo en Extremos. Al ser una ruptura de momentum, el precio debe continuar inmediatamente a favor del movimiento; si se pausa o se devuelve en la siguiente vela, la ruptura falló y el auditor debe intervenir de inmediato.
 - Asigna 1 a 2 velas (5 a 10 minutos): Si la entrada fue gatillada por un patrón de rechazo rápido de vela única (Martillo o Martillo Invertido) o una Envolvente sobre los extremos absolutos. Al ser giros rápidos, el sistema requiere una revalidación casi inmediata para verificar que el precio reaccionó.
 - Asigna 3 a 4 velas (15 a 20 minutos): Si la entrada fue gatillada por un patrón geométrico complejo o de continuación (Doble Techo/Suelo, HCH, Banderas, Cuñas). Estas estructuras grandes requieren más tiempo de desarrollo para confirmar que la ruptura fue real antes de que el auditor las analice.
 - Si la acción recomendada es "Mantener", establece por defecto este valor en 1 vela (indica que el bot debe volver a analizar el mercado en la siguiente vela de 5 minutos cerrados en busca de nuevas oportunidades).
@@ -277,23 +289,31 @@ Cruza los nuevos datos con los [DATOS DE LA POSICIÓN ABIERTA] bajo los siguient
 Determina el dictamen final del campo `reevaluacion` aplicando estas directrices de gestión:
 
 1. REGLA PARA 'Cerrar' (Liquidación Inmediata a Mercado):
-   - Dicta 'Cerrar' si se activa cualquiera de las condiciones de invalidez por Caducidad Temporal, Tendencia Lateral Extrema o Destrucción Estructural detalladas en la sección 4.
+   - Dicta 'Cerrar' si se activa cualquiera de las condiciones de invalidez por Caducidad Temporal, Tendencia Lateral Extrema, Destrucción Estructural o Fallo de Momentum/Fakeout detalladas en la sección 4.
    - Si el precio ha alcanzado el 80% del recorrido hacia tu [Take Profit original] pero la acción del precio se frena en seco formando un micro-rango lateral de 4 velas, dicta 'Cerrar' para tomar ganancias manuales y no arriesgar el capital.
 
 2. REGLA PARA 'Ajustar' (Modificación de Niveles Pasivos con Enfoque Cauto):
-   - Si el [Beneficio Neto actual] es positivo y el precio avanzó a favor superando el [Precio de entrada original] por una distancia de al menos 1.0x VP_actual, pero aún no activa mecánicamente tu sistema de Trailing Stop original, dicta 'Ajustar'. Recomienda elevar el `stop_loss` al precio de entrada (Breakeven) + un colchón de 0.3x VP_actual para eliminar el riesgo de pérdidas.
+   - Si el [Beneficio Neto actual] es positivo y el precio avanzó a favor superando el [Precio de entrada original] por una distancia de al menos 1.0x VP_actual, pero aún no activa mecánicamente tu sistema de Trailing Stop original, dicta 'Ajustar'. Recomienda mover el `stop_loss` al precio de entrada (Breakeven) más un colchón a favor del movimiento de 0.3x VP_actual (sumar si es Compra, restar si es Venta) para eliminar el riesgo de pérdidas.
    - RESTRICCIÓN DE CODICIA (SER CAUTO): Si la operación se desarrolla con fuerza a favor de la tendencia, QUEDAN ESTRICTAMENTE PROHIBIDAS las suposiciones eufóricas de expandir o aumentar el [Take Profit original] de forma exagerada. El Take Profit original representa el objetivo estadístico real del patrón y no debe moverse al alza bajo ninguna circunstancia de optimismo visual.
    - AJUSTE REALISTA DEL TRAILING STOP: Si decides modificar el `trailing_stop_activation` debido a la nueva acción del precio, su nuevo valor debe ser un nivel técnico alcanzable y conservador (nunca superior a un ajuste adicional de +0.5x VP_actual respecto al nivel original). El objetivo principal de la revaluación es asegurar un beneficio real y proteger el capital, no perseguir precios hipotéticos.
+   - AJUSTE ULTRA-RÁPIDO PARA AUSENCIA DE RECHAZO: Si el patrón de origen fue "Ausencia de Rechazo en Extremos" y la Vela 0 cierra a favor del movimiento logrando un beneficio de al menos 0.8x VP_actual, dicta 'Ajustar' de forma obligatoria. Eleva o baja el `stop_loss` al precio de entrada original (Breakeven) de forma inmediata. Las operaciones de momentum no admiten retrocesos profundos; deben ser libres de riesgo lo antes posible.
 
 3. REGLA PARA 'Mantener' (Sin Cambios en el Broker):
    - Si la estructura que gatilló el primer prompt sigue su curso limpio con velas de rango amplio a favor y no se detecta ninguna señal de estancamiento o patrón inverso, dicta 'Mantener'. Los precios objetivo permanecen intactos.
+
+4. AUDITORÍA ESPECÍFICA PARA EL PATRÓN DE AUSENCIA DE RECHAZO (Ruptura por Absorción / Momentum):
+   - FILTRO DE FALLO INMEDIATO POR REVERSIÓN (CRÍTICO): Si la posición se abrió bajo el patrón "Ausencia de Rechazo en Extremos" y la Vela 0 cierra reingresando al rango previo (por debajo del Máximo Absoluto en COMPRA, o por encima del Mínimo Absoluto en VENTA), la ruptura ha fallado por completo (Fakeout). Dicta 'Cerrar' inmediatamente a mercado.
+   - FILTRO DE AGOTAMIENTO Y RECHAZO EN CONTRA: Si han pasado más de 2 velas desde la apertura y el precio actual (Vela 0) cumple cualquiera de estas condiciones, el momentum se ha evaporado y la absorción institucional terminó. Dicta 'Cerrar' de forma fulminante:
+     * Condición de Tamaño: El tamaño del cuerpo real de la Vela 0 es estrictamente < 0.5x VP_actual (indica compresión o pérdida de volumen).
+     * Condición de Rechazo en COMPRA: La mecha superior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (indica fuerte presión vendedora).
+     * Condición de Rechazo en VENTA: La mecha inferior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (indica fuerte presión compradora).
 
 ### 6. REGLAS PARA CAMPOS DE RETORNO Y CONSISTENCIA PYDANTIC
     - `decision_accion`: Recomendación de mercado basada exclusivamente en los datos actuales ("Comprar", "Vender", "Mantener"). Si estás auditando y la orden sigue vigente sin anomalías, establece "Mantener".
     - `reevaluacion`: Campo crítico de control operativo. Debe ser estrictamente uno de estos tres literales: "Mantener", "Cerrar" o "Ajustar", aplicando las reglas de la sección 5.
     - `precio_entrada`: Debe ser EXACTAMENTE el precio de 'Close' de la última vela (Vela 0) del set de datos provisto.
     - `velas_espera_validacion`: Determina con criterio cauto un número entero estrictamente entre 1 y 4 (máximo) para rellenar este campo:
-        * Asigna 1 vela (5 minutos): Si dictas 'Ajustar' (para verificar inmediatamente el impacto de los nuevos niveles) o si el precio actual está a menos de 0.5x VP_actual de tu Stop Loss o Take Profit.
+        * Asigna 1 vela (5 minutos): Si dictas 'Ajustar' (para verificar inmediatamente el impacto de los nuevos niveles), si el precio actual está a menos de 0.5x VP_actual de tu Stop Loss o Take Profit, O SI EL PATRÓN DE ORIGEN ES "Ausencia de Rechazo en Extremos". Al ser operaciones de alta velocidad, el auditor debe despertar en la siguiente vela de forma obligatoria para reevaluar el momentum.
         * Asigna 2 velas (10 minutos): Si el precio se mueve de forma sana y ordenada a favor del movimiento.
         * Asigna 3 a 4 velas (15 a 20 minutos): Únicamente si el mercado se encuentra en una fase de Tendencia Lateral o Consolidación.
 """

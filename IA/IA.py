@@ -103,9 +103,6 @@ def ejecutar_operacion():
             dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
             dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
 
-            # =====================================================================
-            # PASO SEGURO POR PYDANTIC (YA PLANO Y SIN CAMPOS FALTANTES)
-            # =====================================================================
             objeto_validado = AnalisisPatronGroq.model_validate(dict_reparado)
 
         accion                  = objeto_validado.decision_accion
@@ -231,9 +228,6 @@ def reevaluar_operacion():
             dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
             dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
 
-            # =====================================================================
-            # PASO SEGURO POR PYDANTIC (YA PLANO Y SIN CAMPOS FALTANTES)
-            # =====================================================================
             objeto_validado = AnalisisPatronGroq.model_validate(dict_reparado)
 
         reevaluacion            = objeto_validado.reevaluacion  # Agregado para que no se pierda este field crítico

@@ -1,6 +1,6 @@
 import pandas as pd
 
-MOSTRAR_GRAFICO = True
+MOSTRAR_GRAFICO = False
 DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
 
 # ============================================================================
