@@ -41,16 +41,19 @@ def extraer_velas(intervalo):
     else:
         parametros.error = "Error: No se recibieron datos de TradingView"
 
-def extraer_velas_para_IA(activo_actual, intervalo):
+def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
 
-    # 2. Descargar las últimas 60 velas de FX
+    # 2. Descargar las últimas X velas de FX
+    if len(parametros.lista_velas_acumuladas) == 0:
+        num_velas = 61
+
     df = tv.get_hist(
         symbol=symbols.get(activo_actual),
         exchange='FX', 
         interval=intervalo,
-        n_bars=61
+        n_bars=num_velas
     )
 
     # 3. Procesar, renombrar columnas y convertir al formato solicitado
@@ -59,6 +62,15 @@ def extraer_velas_para_IA(activo_actual, intervalo):
         df.columns = ['Open', 'High', 'Low', 'Close']
         data = df.to_dict(orient='records')
 
-        return data[:-1]
+        if len(parametros.lista_velas_acumuladas) == 0:
+            parametros.lista_velas_acumuladas = data[:-1]
+            return data[:-1]
+
+        # Actualizar la última vela
+        if len(parametros.lista_velas_acumuladas) > 0 and num_velas == 1:
+            nueva_vela_cerrada = data[0]
+            parametros.lista_velas_acumuladas.append(nueva_vela_cerrada)
+            parametros.lista_velas_acumuladas.pop(0)
+            return parametros.lista_velas_acumuladas        
     else:
         error = "Error: No se recibieron datos de TradingView"

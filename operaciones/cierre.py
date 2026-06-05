@@ -90,12 +90,11 @@ def cierre_trailing_stop(maximo_rendimiento_alcanzado, rendimiento_actual):
     return False, False, "Ejecutándose"
 
 def cierre_take_profit(beneficio_neto):
-    if not parametros.USAR_IA:
-        if beneficio_neto >= parametros.TAKE_PROFIT:
-            operacion_ganada = True
-            motivo_cierre = f"Take Profit: ${beneficio_neto:.2f}"
+    if beneficio_neto >= parametros.TAKE_PROFIT_USD:
+        operacion_ganada = True
+        motivo_cierre = f"Take Profit USD: ${beneficio_neto:.2f}"
 
-            return True, operacion_ganada, motivo_cierre
+        return True, operacion_ganada, motivo_cierre
     elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
         motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {parametros.TAKE_PROFIT}"
         operacion_ganada = True
@@ -106,6 +105,7 @@ def cierre_take_profit(beneficio_neto):
         operacion_ganada = True
 
         return True, operacion_ganada, motivo_cierre
+    
 
     return False, False, "Ejecutándose"
 

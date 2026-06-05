@@ -6,7 +6,7 @@ DEBUG = False # En True no realiza ninguna operación ... solo se conecta y mues
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
-CARGAR_DATOS = True
+CARGAR_DATOS = False
 PRELOAD_HISTORICO_VOLUMEN =  [5000, 5000, 5492, 3817, 5425, 2564]
 PRELOAD_HISTORICO_MACD =  [7.91, 7.64, 5.06]
 PRELOAD_HISTORICO_RSI = [22, 17]
@@ -42,6 +42,7 @@ PORCENTAJE_BOLLINGER_BANDA_MEDIA = 0.75 # Porcentaje (entre 0 y 1) del límite e
 TRAILING_STOP = 15.0                    # Mínimo de ganancia para activar la persecución inteligente (por defecto en %)
 DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
 TAKE_PROFIT = 5.0                       # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
+TAKE_PROFIT_USD = 9.0                   # 🔥 Modifica este valor por la ganancia deseada en dólares
 STOP_LOSS  = -20.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
 STOP_LOSS_INICIAL_TRAILING = -20.0      # 🔴 Stop loss inicial antes de ser movido con el trailing stop (Modo IA)
 
@@ -60,7 +61,20 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS
 # ============================================================================
 USAR_IA = True
-MODELO_IA = "gemini-3.1-flash-lite" #'gemini-3.5-flash',
+MODELO_IA = {
+    "Gemini": {
+        "activo": False,
+        "modelo": "gemini-3.1-flash-lite"
+        #"modelo": "gemini-3.5-flash"
+        #"modelo": "gemini-2.5-flash"
+        #"modelo": "gemini-2.5-flash"
+    },
+    "Groq": {
+        "activo": True,
+        #"modelo": "llama-3.3-70b-versatile"
+        "modelo": "openai/gpt-oss-120b"
+    }
+}
 TIPO_PROMPT = {
     "Patrones": {
         "activo": True,
@@ -146,7 +160,7 @@ CRITERIO_INDICADORES = [
     {
         # 7
         "MACD": False,
-        "RSI": True,
+        "RSI": False,
         "BOLLINGER": False,
         "EMA": False
     }

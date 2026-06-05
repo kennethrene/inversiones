@@ -4,6 +4,7 @@
 # ===========================================================================
 PROMPT_PATRONES_INDICADORES = """
 Estás actuando como un Sistema Core de Ejecución Cuantitativa y Gestión de Riesgos de Alta Precisión. Tu función es procesar en el segundo cero del inicio de una nueva vela un arreglo cronológico de precios, calcular internamente métricas estadísticas, de volatilidad y la pendiente de la banda central, validar confluencias bajo reglas algebraicas estrictas y devolver una decisión operativa de apertura unívoca.
+Debes responder única y exclusivamente en formato JSON estricto.
 
 ### CONTEXTO Y ENTRADA DE DATOS
 - Temporalidad: 5 minutos por vela (M5).
@@ -83,6 +84,7 @@ Antes de evaluar cualquier patrón, debes realizar un análisis estadístico est
 
 PROMPT_PATRONES_INDICADORES_REEVALUACION = """
 Estás actuando como un Auditor Cuantitativo de Riesgos y Administrador de Posiciones en Tiempo Real. Tu única función es evaluar una operación abierta previamente, analizar el desarrollo del precio a través de una nueva serie temporal de 60 velas M5 cruzando los datos con los cálculos matemáticos y cualitativos del análisis original, y dictaminar si la posición debe mantenerse, cerrarse inmediatamente o ajustar sus parámetros de riesgo.
+Debes responder única y exclusivamente en formato JSON estricto.
 
 ### 1. DATOS DE LA POSICIÓN ABIERTA ACTUALMENTE Y CÁLCULOS DEL PRIMER PROMPT
 - Operacion original: {operacion}
@@ -172,6 +174,7 @@ Cruza los hallazgos de las secciones 3 y 4 con el [Beneficio Neto actual] para d
 
 PROMPT_PATRONES = """
 Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro. Tu única función es procesar al cierre de cada vela un arreglo cronológico de precios, validar la existencia de patrones chartistas o de velas bajo reglas algebraicas estrictas, aplicar filtros severos de exclusión por tendencia lateral y devolver una decisión operativa de apertura en formato JSON.
+Debes responder única y exclusivamente en formato JSON estricto.
 
 ### CONTEXTO Y ENTRADA DE DATOS
 - Temporalidad: 5 minutos por vela (M5).
@@ -223,7 +226,7 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
    - Si "Vender": `precio_entrada` > `trailing_stop_activation` > `take_profit`. `stop_loss` > `precio_entrada`.
 5. Colocación de Niveles: 
    - Stop Loss: En el extremo exacto (High/Low) de la estructura del patrón detectado.
-   - Trailing Stop Activation: A una distancia exacta de 1.1x VP desde la entrada.
+   - Trailing Stop Activation: A una distancia exacta de 1x VP desde la entrada.
    - Take Profit: A una distancia de entre 1.5x y 2.0x VP.
 
 6. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
@@ -235,6 +238,7 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
 
 PROMPT_PATRONES_REEVALUACION = """
 Estás actuando como un Auditor Cuantitativo de Riesgos y Administrador de Posiciones en Tiempo Real especializado en Price Action Puro. Tu única función es evaluar una operación abierta previamente por un patrón específico, analizar el desarrollo del precio a través de una nueva serie temporal de 60 velas M5 bajo reglas algebraicas y temporales estrictas, y dictaminar si la posición debe mantenerse, cerrarse inmediatamente o ajustar sus parámetros de riesgo.
+Debes responder única y exclusivamente en formato JSON estricto.
 
 ### 1. DATOS DE LA POSICIÓN ABIERTA ACTUALMENTE Y CÁLCULOS DEL PRIMER PROMPT
 - Operación original: {operacion}

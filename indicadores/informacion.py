@@ -56,12 +56,22 @@ def obtener_texto_indicadores(elementos_indicadores):
         except Exception as e_bucle:
                     parametros.error = traceback.format_exc()
                     time.sleep(0.1)
+    
+    if len(texto_macd) > 0:
+        texto_macd += '\n'
+    if len(texto_rsi) > 0:
+        texto_rsi += '\n'
+    if len(texto_volumen) > 0:
+        texto_volumen += '\n'
+    if len(texto_ema) > 0:
+        texto_ema += '\n'
+
     return (
-        f"{texto_macd}\n"
-        f"{texto_rsi}\n"
-        f"{texto_adx}\n"
-        f"{texto_volumen}\n"
-        f"{texto_ema}\n"
+        f"{texto_macd}"
+        f"{texto_rsi}"
+        f"{texto_adx}"
+        f"{texto_volumen}"
+        f"{texto_ema}"
         f"{texto_bollinger}"
     )
 

@@ -5,7 +5,7 @@ from indicadores.criterios import criterio1, criterio2, criterio3, criterio4, cr
 from indicadores.criterios import criterio6
 from ui.interfaz import ui_trailing
 from archivos.seguimiento import guardar_estadistica
-import IA
+import IA.IA as IA
 from datetime import datetime, timedelta
 
 def debe_ejecutar_operacion():
