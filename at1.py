@@ -149,11 +149,11 @@ def bot_scalping():
                 ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre)
                         
             except Exception as e_bucle:
-                parametros.error = traceback.format_exc()
+                parametros.error += traceback.format_exc()
                 time.sleep(0.1)
             
     except Exception as e:
-        parametros.error = traceback.format_exc()
+        parametros.error += traceback.format_exc()
 
 def iniciar_renderizado_grafico_mac():
     # Inicialización de la figura y el eje nativo

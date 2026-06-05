@@ -1,6 +1,6 @@
 import pandas as pd
 
-MOSTRAR_GRAFICO = False
+MOSTRAR_GRAFICO = True
 DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
 
 # ============================================================================
@@ -63,14 +63,13 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 USAR_IA = True
 MODELO_IA = {
     "Gemini": {
-        "activo": False,
+        "activo": True,
         "modelo": "gemini-3.1-flash-lite"
         #"modelo": "gemini-3.5-flash"
         #"modelo": "gemini-2.5-flash"
-        #"modelo": "gemini-2.5-flash"
     },
     "Groq": {
-        "activo": True,
+        "activo": False,
         #"modelo": "llama-3.3-70b-versatile"
         "modelo": "openai/gpt-oss-120b"
     }
@@ -251,7 +250,7 @@ ultimo_patron = "Ninguno"
 
 historico_cuenta = []
 log_operacion = None
-error = None
+error = ""
 
 movimiento_abrupto = {
     "US100": 20.0,      # 6 puntos en 1 segundo es una aceleración violenta

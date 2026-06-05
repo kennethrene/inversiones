@@ -62,7 +62,7 @@ def guardar_estadistica(evento):
             
         print(f"💾 [SISTEMA]: Datos guardados en estadísticas para {evento} en {parametros.activo_actual}.")
     except Exception as e:
-        parametros.error = traceback.format_exc()
+        parametros.error = traceback.format_exc() + "\n"
 
 def actualizar_ultima_operacion(datos, ganada, motivo):
     """
@@ -103,4 +103,4 @@ def actualizar_ultima_operacion(datos, ganada, motivo):
         print(f"💾 [ESTADÍSTICAS]: Última fila actualizada con éxito")
         
     except Exception as e:
-        parametros.error = traceback.format_exc()
+        parametros.error = traceback.format_exc() + "\n"

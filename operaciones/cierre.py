@@ -55,7 +55,7 @@ def ejecutar_cierre(driver, motivo_cierre):
 
         time.sleep(2)
     except Exception as error_ejecucion:
-        parametros.error = traceback.format_exc()
+        parametros.error += traceback.format_exc() + "\n"
 
 def cierre_stop_loss(rendimiento_actual):
     if not parametros.USAR_IA:

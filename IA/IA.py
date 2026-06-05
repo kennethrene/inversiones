@@ -15,7 +15,11 @@ client = genai.Client(api_key=secrets.GOOGLE_IA)
 client_groq = Groq(api_key=secrets.GROQ_IA)
 
 def ejecutar_operacion():
-    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, 61)
+    num_velas = 1
+    if len(parametros.lista_velas_acumuladas) == 0:
+        num_velas = 61
+
+    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
     datos_en_texto = formatear_velas_para_ia(velas)
 
     banco_de_datos_bot = {
@@ -121,10 +125,14 @@ def ejecutar_operacion():
 
         return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control
     else:
-        parametros.error = "No hay datos para analizar"
+        parametros.error = "IA - No hay datos para analizar\n"
 
 def reevaluar_operacion():
-    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, 1)
+    num_velas = parametros.velas_espera
+    if len(parametros.lista_velas_acumuladas) == 0:
+        num_velas = 61
+
+    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
     datos_en_texto = formatear_velas_para_ia(velas)
 
     if velas != None and len(velas) > 0 :
@@ -245,7 +253,7 @@ def reevaluar_operacion():
 
         return reevaluacion, patron, confianza, explicacion_reeval, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control
     else:
-        parametros.error = "No hay datos para analizar"
+        parametros.error = "IA - No hay datos para analizar\n"
 
 def formatear_velas_para_ia(datos):
     # Crear el encabezado para guiar la lectura del modelo

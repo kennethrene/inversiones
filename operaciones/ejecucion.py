@@ -97,7 +97,8 @@ def debe_ejecutar_operacion():
                         f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
                         f"      Explicación         : {explicacion}\n"
                         f"      Puntos de control   : {puntos_control}\n"
-                        f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})"
+                        f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                 )
                 parametros.TAKE_PROFIT = take_profit_ajustado
                 parametros.STOP_LOSS = stop_loss_ajustado
@@ -109,8 +110,9 @@ def debe_ejecutar_operacion():
             else:
                 parametros.log_operacion = (
                     f"ℹ️  IA recomienda {accion}\n"
-                    f"      Patrón: {patron}\n"
-                    f"      Explicación: {explicacion}"
+                    f"      Patrón      : {patron}\n"
+                    f"      Explicación : {explicacion}\n"
+                    f"      Hora log    : {datetime.now().strftime('%H:%M')}"
                 )
                 
     return ""
@@ -186,7 +188,8 @@ def reevaluar_operacion():
                     f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
                     f"      Explicación         : {explicacion}\n"
                     f"      Puntos de control   : {puntos_control}\n"
-                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})"
+                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                 )
                 parametros.TAKE_PROFIT = take_profit_ajustado
                 parametros.STOP_LOSS = stop_loss_ajustado
@@ -202,7 +205,8 @@ def reevaluar_operacion():
                 parametros.log_operacion = (
                     f"ℹ️  IA recomienda mantener\n"
                     f"      Explicación         : {explicacion}\n"
-                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})"
+                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                 )
     
     return "", ""

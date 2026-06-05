@@ -127,6 +127,7 @@ def obtener_datos_compra_venta(segundo_actual, con_grafico, driver):
         parametros.historico_macd = []
         parametros.historico_rsi = []
         parametros.historico_volumen = []
+        parametros.lista_velas_acumuladas = []
 
         if con_grafico:
             extraer_datos_velas()

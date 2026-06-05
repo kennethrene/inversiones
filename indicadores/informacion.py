@@ -54,7 +54,7 @@ def obtener_texto_indicadores(elementos_indicadores):
                 texto_ema = ui_ema(parent_text_content, texto_componente, texto_ema)
                 texto_bollinger = ui_bollinger(parent_text_content, texto_componente, texto_bollinger)
         except Exception as e_bucle:
-                    parametros.error = traceback.format_exc()
+                    parametros.error = traceback.format_exc() + "\n"
                     time.sleep(0.1)
     
     if len(texto_macd) > 0:

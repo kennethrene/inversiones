@@ -44,7 +44,7 @@ def loop_render_grafico(frame, fig, ax):
             
         fig.canvas.draw_idle() # Redibujo eficiente optimizado para backend TkAgg
     except Exception as e:
-        parametros.error = traceback.format_exc()
+        parametros.error += traceback.format_exc() + "\n"
         pass
 
 def extraer_datos_velas():

@@ -39,16 +39,13 @@ def extraer_velas(intervalo):
 
         return data[:-1]
     else:
-        parametros.error = "Error: No se recibieron datos de TradingView"
+        parametros.error = "Error: No se recibieron datos de TradingView\n"
 
 def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
 
     # 2. Descargar las últimas X velas de FX
-    if len(parametros.lista_velas_acumuladas) == 0:
-        num_velas = 61
-
     df = tv.get_hist(
         symbol=symbols.get(activo_actual),
         exchange='FX', 
@@ -62,15 +59,19 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
         df.columns = ['Open', 'High', 'Low', 'Close']
         data = df.to_dict(orient='records')
 
-        if len(parametros.lista_velas_acumuladas) == 0:
+        if num_velas == 61:
             parametros.lista_velas_acumuladas = data[:-1]
             return data[:-1]
 
-        # Actualizar la última vela
-        if len(parametros.lista_velas_acumuladas) > 0 and num_velas == 1:
-            nueva_vela_cerrada = data[0]
-            parametros.lista_velas_acumuladas.append(nueva_vela_cerrada)
-            parametros.lista_velas_acumuladas.pop(0)
-            return parametros.lista_velas_acumuladas        
+        # --- ACTUALIZACIÓN DINÁMICA DE 'N' VELAS ---
+        # Verificamos que tengamos un historial base cargado previamente
+        if len(parametros.lista_velas_acumuladas) >= num_velas:
+            # Slices de Python: Reemplaza exactamente desde el índice [-num_velas] hasta el final
+            parametros.lista_velas_acumuladas[-num_velas:] = data
+            return parametros.lista_velas_acumuladas
+        else:
+            # Caso de contingencia si la lista acumulada está vacía o es menor que num_velas
+            parametros.lista_velas_acumuladas = data
+            return parametros.lista_velas_acumuladas
     else:
-        error = "Error: No se recibieron datos de TradingView"
+        parametros.error = "Error: No se recibieron datos de TradingView\n"
