@@ -174,7 +174,7 @@ Cruza los hallazgos de las secciones 3 y 4 con el [Beneficio Neto actual] para d
 
 PROMPT_PATRONES = """
 Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro. Tu única función es procesar al cierre de cada vela un arreglo cronológico de precios, validar la existencia de patrones chartistas o de velas bajo reglas algebraicas estrictas, aplicar filtros severos de exclusión por tendencia lateral y devolver una decisión operativa de apertura en formato JSON.
-Debes responder única y exclusivamente en formato JSON estricto.
+Debes responder única y exclusivamente en formato JSON estricto sin incluir los campos reevaluacion ni explicacion_reevaluacion.
 
 ### CONTEXTO Y ENTRADA DE DATOS
 - Temporalidad: 5 minutos por vela (M5).

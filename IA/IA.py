@@ -1,18 +1,11 @@
-from google import genai
-from groq import Groq
-from google.genai import types
-from pydantic import BaseModel, Field
 from extraccion.velas import extraer_velas_para_IA
-import json
 import configuracion.parametros as parametros
 import configuracion.prompts as prompts
-import configuracion.secrets as secrets
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Optional
 from tvDatafeed import Interval
-from IA.esquemas import AnalisisPatronGroq, AnalisisPatronGemini
-
-client = genai.Client(api_key=secrets.GOOGLE_IA)
-client_groq = Groq(api_key=secrets.GROQ_IA)
+import IA.gemini as gemini
+import IA.groq as groq
+import IA.deepseek as deepseek
 
 def ejecutar_operacion():
     num_velas = 1
@@ -33,77 +26,15 @@ def ejecutar_operacion():
 
     if velas != None and len(velas) > 0:
         proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)
-        json_crudo_texto = ""
 
         if proveedor_activo == "Gemini":
-            response = client.models.generate_content(
-                model=modelo,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=AnalisisPatronGemini,
-                    temperature=0.1
-                ),
-            )
-            json_crudo_texto = response.text
-            objeto_validado = AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
 
         elif proveedor_activo == "Groq":
-            completion = client_groq.chat.completions.create(
-                model=modelo,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "AnalisisPatronGroq",
-                        "strict": True,
-                        "schema": AnalisisPatronGroq.model_json_schema() # Pydantic genera el mapa de llaves automáticamente
-                    }
-                },
-                temperature=0.1  # Determinismo máximo para evitar alucinaciones
-            )
-            json_crudo_texto = completion.choices[0].message.content
-
-            # 1. Cargamos el texto crudo en un diccionario común de Python
-            dict_sucio = json.loads(json_crudo_texto)
-            
-            # 2. Creamos una bolsa de datos unificada mezclando sub-estructuras si existen
-            analisis_sub = dict_sucio.get("analisis_mercado", {})
-            decision_sub = dict_sucio.get("decision_operativa", {})
-            monitoreo_sub = dict_sucio.get("monitoreo_sistema", {})
-            
-            datos_mezclados = {**dict_sucio, **analisis_sub, **decision_sub, **monitoreo_sub}
-            
-            # 3. Construimos a mano el diccionario plano final garantizando las 7 llaves críticas
-            dict_reparado = {
-                "decision_accion": datos_mezclados.get("accion_sugerida") or datos_mezclados.get("decision_accion") or "Mantener",
-                "reevaluacion": datos_mezclados.get("reevaluacion") or "Mantener",
-                "nombre_del_patron": datos_mezclados.get("patron_detectado") or datos_mezclados.get("nombre_del_patron") or "Ninguno",
-                "fiabilidad": datos_mezclados.get("fiabilidad_patron") or datos_mezclados.get("fiabilidad") or "Baja",
-                "precio_entrada": float(datos_mezclados.get("precio_entrada") or 0.0),
-                "stop_loss": float(datos_mezclados.get("stop_loss") or 0.0),
-                "take_profit": float(datos_mezclados.get("take_profit") or 0.0),
-                "trailing_stop_activation": float(datos_mezclados.get("trailing_stop_activation") or datos_mezclados.get("trailing_stop") or 0.0),
-                "puntos_control_patron": datos_mezclados.get("puntos_control_patron")
-            }
-            
-            # Corrección estricta para números enteros en velas de espera
-            try:
-                dict_reparado["velas_espera_validacion"] = int(datos_mezclados.get("velas_espera_validacion") or datos_mezclados.get("velas_espera") or 1)
-            except:
-                dict_reparado["velas_espera_validacion"] = 1
-                
-            # Extracción y duplicación de textos explicativos
-            texto_explicativo = datos_mezclados.get("justificacion_riesgo") or datos_mezclados.get("explicacion_reevaluacion") or datos_mezclados.get("explicacion_tecnica") or "Estructura validada."
-            dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
-            dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
-
-            objeto_validado = AnalisisPatronGroq.model_validate(dict_reparado)
+            objeto_validado = groq.ejecutar_prompt(modelo, prompt)
+        
+        elif proveedor_activo == "DeepSeek":
+            objeto_validado = deepseek.ejecutar_prompt(modelo, prompt)
 
         accion                  = objeto_validado.decision_accion
         patron                  = objeto_validado.nombre_del_patron
@@ -158,81 +89,17 @@ def reevaluar_operacion():
         prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"])
         prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)
-        json_crudo_texto = ""
+        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)        
 
         if proveedor_activo == "Gemini":
-            response = client.models.generate_content(
-                model=modelo,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=AnalisisPatronGemini,
-                    temperature=0.1
-                ),
-            )
-            json_crudo_texto = response.text
-            objeto_validado = AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
 
         elif proveedor_activo == "Groq":
-            completion = client_groq.chat.completions.create(
-                model=modelo,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "AnalisisPatronGroq",
-                        "schema": AnalisisPatronGroq.model_json_schema() # Pydantic genera el mapa de llaves automáticamente
-                    }
-                },
-                temperature=0.1  # Determinismo máximo para evitar alucinaciones
-            )
-            json_crudo_texto = completion.choices[0].message.content
+            objeto_validado = groq.ejecutar_prompt(modelo, prompt)
 
-            # 1. Cargamos el texto crudo en un diccionario común de Python
-            dict_sucio = json.loads(json_crudo_texto)
-            
-            # 2. Creamos una bolsa de datos unificada mezclando sub-estructuras si existen
-            analisis_sub = dict_sucio.get("analisis_mercado", {})
-            decision_sub = dict_sucio.get("decision_operativa", {})
-            monitoreo_sub = dict_sucio.get("monitoreo_sistema", {})
-            
-            datos_mezclados = {**dict_sucio, **analisis_sub, **decision_sub, **monitoreo_sub}
-            
-            # 3. Construimos a mano el diccionario plano final garantizando las 7 llaves críticas
-            dict_reparado = {
-                "decision_accion": datos_mezclados.get("accion_sugerida") or datos_mezclados.get("decision_accion") or "Mantener",
-                "reevaluacion": datos_mezclados.get("reevaluacion") or "Mantener",
-                "nombre_del_patron": datos_mezclados.get("patron_detectado") or datos_mezclados.get("nombre_del_patron") or "Ninguno",
-                "fiabilidad": datos_mezclados.get("fiabilidad_patron") or datos_mezclados.get("fiabilidad") or "Baja",
-                "precio_entrada": float(datos_mezclados.get("precio_entrada") or 0.0),
-                "stop_loss": float(datos_mezclados.get("stop_loss") or 0.0),
-                "take_profit": float(datos_mezclados.get("take_profit") or 0.0),
-                "trailing_stop_activation": float(datos_mezclados.get("trailing_stop_activation") or datos_mezclados.get("trailing_stop") or 0.0),
-                "puntos_control_patron": datos_mezclados.get("puntos_control_patron")
-            }
-            
-            # Corrección estricta para números enteros en velas de espera
-            try:
-                dict_reparado["velas_espera_validacion"] = int(datos_mezclados.get("velas_espera_validacion") or datos_mezclados.get("velas_espera") or 1)
-            except:
-                dict_reparado["velas_espera_validacion"] = 1
-                
-            # Extracción y duplicación de textos explicativos
-            texto_explicativo = datos_mezclados.get("justificacion_riesgo") or datos_mezclados.get("explicacion_reevaluacion") or datos_mezclados.get("explicacion_tecnica") or "Estructura validada."
-            dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
-            dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
-
-            objeto_validado = AnalisisPatronGroq.model_validate(dict_reparado)
-
-        reevaluacion            = objeto_validado.reevaluacion  # Agregado para que no se pierda este field crítico
+        reevaluacion            = objeto_validado.reevaluacion 
         patron                  = objeto_validado.nombre_del_patron
-        explicacion_reeval      = objeto_validado.explicacion_reevaluacion # Extraído para tus logs
+        explicacion_reeval      = objeto_validado.explicacion_reevaluacion
         confianza               = objeto_validado.fiabilidad
         take_profit             = objeto_validado.take_profit
         stop_loss               = objeto_validado.stop_loss
@@ -300,22 +167,13 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
         "auditoria_inputs": datos_estrategia["auditoria_inputs"]
     }
 
-def obtener_modelo_ia_activo(configuracion: Dict[str, Any]) -> Tuple[str, str]:
-    # 1. Filtramos las plataformas que tienen 'activo' en True
-    plataformas_activas = [
-        (proveedor, datos["modelo"]) 
-        for proveedor, datos in configuracion.items() 
-        if datos.get("activo") is True
-    ]
-    
-    # 2. Control de seguridad: Si no hay ninguna activa
-    if not plataformas_activas:
-        raise ValueError("Error Crítico: No hay ningún proveedor de IA marcado como 'activo': True en MODELO_IA.")
-        
-    # 3. Control de seguridad: Si hay más de una activa por error
-    if len(plataformas_activas) > 1:
-        proveedores_en_conflicto = [p[0] for p in plataformas_activas]
-        raise ValueError(f"Error Crítico: Conflicto. Múltiples proveedores activos: {proveedores_en_conflicto}. Solo debe haber uno.")
-    
-    # 4. Devolvemos una tupla con (Proveedor, Nombre_del_Modelo)
-    return plataformas_activas[0]
+def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str]]:
+    # 1. Buscar la IA que tenga "activo": True
+    for nombre_ia, datos_ia in configuracion.items():
+        if datos_ia.get("activo"):
+            # 2. Buscar el modelo que tenga "activo": True dentro de esa IA
+            for item_modelo in datos_ia.get("modelos", []):
+                if item_modelo.get("activo"):
+                    return nombre_ia, item_modelo["modelo"]
+                    
+    return None

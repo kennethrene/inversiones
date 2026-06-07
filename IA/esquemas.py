@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class PuntosControlGroq(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    primer_pico: float = Field(..., description="Precio del primer pico o suelo.")
-    segundo_pico: float = Field(..., description="Precio del segundo pico o suelo.")
-    linea_cuello: float = Field(..., description="Precio de la línea de cuello (neckline).")
-    zona_soporte: float = Field(..., description="Precio del soporte del rango lateral si aplica.")
-    zona_resistencia: float = Field(..., description="Precio de la resistencia del rango lateral si aplica.")
+    primer_pico: float = Field(0.0, description="Precio del primer pico o suelo.")
+    segundo_pico: float = Field(0.0, description="Precio del segundo pico o suelo.")
+    linea_cuello: float = Field(0.0, description="Precio de la línea de cuello (neckline).")
+    zona_soporte: float = Field(0.0, description="Precio del soporte del rango lateral si aplica.")
+    zona_resistencia: float = Field(0.0, description="Precio de la resistencia del rango lateral si aplica.")
 
 class PuntosControlGemini(BaseModel):
     primer_pico: Optional[float] = Field(None, description="Precio del primer pico o suelo.")
@@ -23,8 +23,8 @@ class AnalisisPatronGroq(BaseModel):
         ..., 
         description="La acción recomendada basada exclusivamente en el análisis de los datos."
     )
-    reevaluacion: Literal["Mantener", "Cerrar", "Ajustar"] = Field(
-        ..., 
+    reevaluacion: Optional[Literal["Mantener", "Cerrar", "Ajustar"]] = Field(
+        "Mantener", 
         description=(
             "La acción operativa recomendada basada en los nuevos datos. "
             "'Mantener': La estructura sigue igual. "
@@ -40,8 +40,8 @@ class AnalisisPatronGroq(BaseModel):
         ..., 
         description="Breve justificación de por qué se identifica ese patrón analizando los precios."
     )
-    explicacion_reevaluacion: str = Field(
-        ..., 
+    explicacion_reevaluacion: Optional[str] = Field(
+        "", 
         description="Justificación técnica detallada de la reevaluación. Debe explicar por qué la nueva acción del precio valida, invalida o altera la estructura inicial, especificando qué patrones, soportes, resistencias o anomalías visualizadas en las nuevas velas fundamentan la decisión."
     )
     fiabilidad: Literal["Alta", "Media", "Baja"] = Field(

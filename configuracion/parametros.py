@@ -64,14 +64,46 @@ USAR_IA = True
 MODELO_IA = {
     "Gemini": {
         "activo": True,
-        "modelo": "gemini-3.1-flash-lite"
-        #"modelo": "gemini-3.5-flash"
-        #"modelo": "gemini-2.5-flash"
+        "modelos": [
+            {
+                "activo": False,
+                "modelo": "gemini-3.1-flash-lite"
+            },
+            {
+                "activo": True,
+                "modelo": "gemini-3.5-flash"
+            },
+            {
+                "activo": False,
+                "modelo": "gemini-2.5-flash"
+            }
+        ]
     },
     "Groq": {
         "activo": False,
-        #"modelo": "llama-3.3-70b-versatile"
-        "modelo": "openai/gpt-oss-120b"
+        "modelos": [
+            {
+                "activo": False,
+                "modelo": "llama-3.1-8b-instant"
+            },
+            {
+                "activo": False,
+                "modelo": "llama-3.3-70b-versatile"
+            },
+            {
+                "activo": True,
+                "modelo": "meta-llama/llama-4-scout-17b-16e-instruct"
+            }
+        ]
+    },
+    "DeepSeek": {
+        "activo": False,
+        "modelos": [
+            {
+                "activo": True,
+                "modelo": "deepseek-chat"
+            }
+        ]
     }
 }
 TIPO_PROMPT = {
