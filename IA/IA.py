@@ -29,6 +29,7 @@ def ejecutar_operacion():
 
         if proveedor_activo == "Gemini":
             objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
+            #objeto_validado = gemini.ejecutar_prompt_inicial(modelo, prompt_plantilla, datos_en_texto)
 
         elif proveedor_activo == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
@@ -89,10 +90,11 @@ def reevaluar_operacion():
         prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"])
         prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)        
+        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)
 
         if proveedor_activo == "Gemini":
             objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
+            #objeto_validado = gemini.ejecutar_prompt_reevaluacion(modelo, prompt_plantilla, banco_de_datos_bot)
 
         elif proveedor_activo == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)

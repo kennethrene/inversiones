@@ -58,19 +58,20 @@ SEGUNDOS_ENFRIAMIENTO = float(TEMPORALIDAD_MINUTOS * 60) / 2  # 🔥 Tiempo mín
 TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 
 # ============================================================================
-# CONFIGURACION DE ESTRATEGIAS HABILITADAS
+# CONFIGURACION DE ESTRATEGIAS HABILITADAS IA
 # ============================================================================
 USAR_IA = True
+HORAS_CACHE = 2
 MODELO_IA = {
     "Gemini": {
         "activo": True,
         "modelos": [
             {
-                "activo": False,
+                "activo": True,
                 "modelo": "gemini-3.1-flash-lite"
             },
             {
-                "activo": True,
+                "activo": False,
                 "modelo": "gemini-3.5-flash"
             },
             {
@@ -136,6 +137,9 @@ TIPO_PROMPT = {
 
 explicacion_decision = ""
 
+# ============================================================================
+# CONFIGURACION DE ESTRATEGIAS HABILITADAS MANUALES
+# ============================================================================
 CRITERIO1 = False
 CRITERIO2 = False
 CRITERIO3 = False
