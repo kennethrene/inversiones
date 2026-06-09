@@ -111,15 +111,19 @@ MODELO_IA = {
     },
     "Claude": {
         "activo": False,
-        "cache": True,
+        "cache": False,
         "modelos": [
             {
-                "activo": True,
+                "activo": False,
                 "modelo": "claude-3-5-sonnet-20241022"
             },
             {
                 "activo": False,
                 "modelo": "claude-3-haiku-20240307"
+            },
+            {
+                "activo": True,
+                "modelo": "claude-sonnet-4-6"
             }
         ]
     }

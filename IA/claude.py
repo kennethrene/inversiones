@@ -21,7 +21,7 @@ def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: dict, cache: bool) 
 
     respuesta = cliente.messages.create(
         model = modelo,
-        max_tokens = 1000,
+        max_tokens = 1024,
         temperature = 0.0,
         
         system = sistema,
