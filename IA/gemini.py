@@ -90,16 +90,22 @@ def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: st
     
     return AnalisisPatronGemini.model_validate_json(response.text)
 
-def ejecutar_prompt(modelo, prompt):
-    response = cliente.models.generate_content(
-            model=modelo,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=AnalisisPatronGemini,
-                temperature=0.1
-            ),
-        )
-    json_crudo_texto = response.text
+def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas):
+    if not cache:    
+        response = cliente.models.generate_content(
+                model=modelo,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=AnalisisPatronGemini,
+                    temperature=0.1
+                ),
+            )
+        json_crudo_texto = response.text
 
-    return AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+        return AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+    else:
+        if inicial:
+            return ejecutar_prompt_inicial(modelo, prompt, velas)
+        else:
+            return ejecutar_prompt_reevaluacion(modelo, prompt, datos, velas)

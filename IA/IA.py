@@ -6,9 +6,11 @@ from tvDatafeed import Interval
 import IA.gemini as gemini
 import IA.groq as groq
 import IA.deepseek as deepseek
+import IA.claude as claude
 
 def ejecutar_operacion():
     num_velas = 1
+
     if len(parametros.lista_velas_acumuladas) == 0:
         num_velas = 61
 
@@ -19,23 +21,30 @@ def ejecutar_operacion():
         "datos": datos_en_texto
     }
 
-    mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
-    inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["inicial_inputs"] if k in banco_de_datos_bot}
-    prompt_plantilla = getattr(prompts, mapa_prompts["inicial"])
-    prompt = prompt_plantilla.format(**inputs_filtrados)
-
     if velas != None and len(velas) > 0:
-        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)
+        proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
+        
+        mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
+        inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["inicial_inputs"] if k in banco_de_datos_bot}
+        
+        if not cache:
+            prompt_plantilla = getattr(prompts, mapa_prompts["inicial"])
+        else:
+            prompt_plantilla = getattr(prompts, mapa_prompts["inicial"] + "_CACHE")
+
+        prompt = prompt_plantilla.format(**inputs_filtrados)
 
         if proveedor_activo == "Gemini":
-            objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
-            #objeto_validado = gemini.ejecutar_prompt_inicial(modelo, prompt_plantilla, datos_en_texto)
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, True, None, datos_en_texto)
 
         elif proveedor_activo == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
         
         elif proveedor_activo == "DeepSeek":
             objeto_validado = deepseek.ejecutar_prompt(modelo, prompt)
+        
+        elif proveedor_activo == "Claude":
+            objeto_validado = claude.ejecutar_prompt_inicial(modelo, prompt_plantilla, datos_en_texto, cache)
 
         accion                  = objeto_validado.decision_accion
         patron                  = objeto_validado.nombre_del_patron
@@ -65,6 +74,8 @@ def reevaluar_operacion():
     datos_en_texto = formatear_velas_para_ia(velas)
 
     if velas != None and len(velas) > 0 :
+        proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
+
         # Ajustar valores para TradingView (cuyos valores son mas bajos que XTB)
         precio_apertura_ajustado = float(parametros.datos_mapeados['Precio Apertura'].replace(" ", "")) - float(parametros.diferencia_precio)
         take_profit_ajustado = float(parametros.TAKE_PROFIT) - float(parametros.diferencia_precio)
@@ -87,14 +98,16 @@ def reevaluar_operacion():
         }
 
         inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["auditoria_inputs"] if k in banco_de_datos_bot}
-        prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"])
+
+        if not cache:
+            prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"])
+        else:
+            prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"] + "_CACHE")
+
         prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        proveedor_activo, modelo = obtener_modelo_ia_activo(parametros.MODELO_IA)
-
         if proveedor_activo == "Gemini":
-            objeto_validado = gemini.ejecutar_prompt(modelo, prompt)
-            #objeto_validado = gemini.ejecutar_prompt_reevaluacion(modelo, prompt_plantilla, banco_de_datos_bot)
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, False, banco_de_datos_bot, datos_en_texto)
 
         elif proveedor_activo == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
@@ -169,13 +182,12 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
         "auditoria_inputs": datos_estrategia["auditoria_inputs"]
     }
 
-def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str]]:
+def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bool]]:
     # 1. Buscar la IA que tenga "activo": True
     for nombre_ia, datos_ia in configuracion.items():
         if datos_ia.get("activo"):
             # 2. Buscar el modelo que tenga "activo": True dentro de esa IA
             for item_modelo in datos_ia.get("modelos", []):
                 if item_modelo.get("activo"):
-                    return nombre_ia, item_modelo["modelo"]
-                    
+                    return nombre_ia, item_modelo["modelo"], datos_ia.get("cache", False)
     return None
