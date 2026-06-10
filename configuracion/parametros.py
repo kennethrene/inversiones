@@ -64,7 +64,7 @@ USAR_IA = True
 HORAS_CACHE = 2
 MODELO_IA = {
     "Gemini": {
-        "activo": True,
+        "activo": False,
         "cache": False,
         "modelos": [
             {
@@ -82,7 +82,7 @@ MODELO_IA = {
         ]
     },
     "Groq": {
-        "activo": False,
+        "activo": True,
         "cache": False,
         "modelos": [
             {

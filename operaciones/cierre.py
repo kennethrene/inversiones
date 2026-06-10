@@ -65,12 +65,12 @@ def cierre_stop_loss(rendimiento_actual):
 
             return True, operacion_ganada, motivo_cierre
     elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
-        motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {parametros.STOP_LOSS}"
+        motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {float(parametros.STOP_LOSS):.2f}"
         operacion_ganada = False
 
         return True, operacion_ganada, motivo_cierre
     elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
-        motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {parametros.STOP_LOSS}"
+        motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {float(parametros.STOP_LOSS):.2f}"
         operacion_ganada = False
 
         return True, operacion_ganada, motivo_cierre

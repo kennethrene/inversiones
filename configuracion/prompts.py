@@ -112,7 +112,7 @@ Antes de evaluar cualquier regla, debes realizar un análisis estadístico estri
     - Pendiente Bajista Fuerte: Si el resultado es negativo y su valor absoluto es mayor a 0.5x de tu "Vela Promedio" (VP).
     - Pendiente Plana / Neutra: Si el resultado se mantiene en un rango comprimido intermedio, indicando falta de fuerza tendencial.
 4. Rango de Volatilidad de Bandas: Define la Banda Superior en el máximo local de las últimas 20 velas y la Banda Inferior en el mínimo local de las últimas 20 velas.
-5. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 10 velas de todo el arreglo.
+5. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 20 velas de la serie para obtener una referencia de volatilidad estable.
 
 ### 4. REGLAS ALGORÍTMICAS DE VALIDACIÓN DE ENTRADAS CON FILTRO DE INCLINACIÓN (PARA AUDITORÍA)
 Utiliza estas reglas de la estrategia raíz para verificar si el precio actual ha violado las condiciones de validez estructural de la operación activa:
@@ -185,12 +185,16 @@ Debes responder única y exclusivamente en formato JSON estricto sin incluir los
 ### INSTRUCCIONES DE PRECALCULO INTERNO OBLIGATORIO
 Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadístico estricto sobre el arreglo para calcular tus métricas de referencia:
 1. Máximo y Mínimo Absoluto: Identifica los precios más altos y más bajos de las 60 velas para establecer los extremos macro del mercado.
-2. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 10 velas de la serie.
+2. Estimación de Volatilidad Base (VP): Calcula el promedio simple del tamaño individual de las últimas 20 velas de la serie para obtener una referencia de volatilidad estable. Fórmula por vela: (High - Low).
 3. Rango de Compresión Lateral (RCL): Identifica el precio máximo más alto y el mínimo más bajo únicamente de las últimas 7 velas del set de datos (Velas -6 a 0). Resta [Máximo Local - Mínimo Local] para hallar el ancho del canal actual.
 
-### FILTRO DE EXCLUSIÓN CRÍTICO: TENDENCIA LATERAL (EVITAR RANGOS)
-- EVALUACIÓN MATEMÁTICA: Si el Ancho del Rango de Compresión Lateral (RCL) calculado en el punto anterior es estrictamente menor a 1.5 veces tu "Vela Promedio" (VP), clasifica de forma obligatoria el estado del mercado como "Lateral_Consolidacion".
-- PROHIBICIÓN OPERATIVA ABSOLUTA: Si el mercado se encuentra en "Lateral_Consolidacion", el precio carece de momentum y volumen real. Queda estrictamente PROHIBIDO abrir operaciones basadas en patrones de tendencia, continuación o mechas ordinarias. Ante este escenario, la única acción permitida es "Mantener" y debes anular cualquier otra señal para proteger el capital del bot contra falsas rupturas.
+### FILTRO DE EXCLUSIÓN CRÍTICO: TENDENCIA LATERAL
+- EVALUACIÓN MATEMÁTICA: Umbral de Volatilidad Mínima = 1.2 x VP.
+- ESCENARIO A (Mercado Comprimido): Si RCL < (1.2 x VP), clasifica el estado del mercado como "Lateral_Consolidacion", A MENOS que se cumpla la excepción del Escenario C.
+- ESCENARIO B (Falsa Volatilidad por Vela Única): Si RCL >= (1.2 x VP), pero el tamaño promedio (High - Low) de las últimas 3 velas cerradas (Velas -2 a 0) es estrictamente menor a 0.6 x VP, clasifica el estado como "Lateral_Consolidacion".
+- ESCENARIO C (EXCEPCIÓN CRÍTICA DE RUPTURA): Si el Close de la Vela 0 rompe y cierra estrictamente POR FUERA del Máximo o Mínimo Absoluto de las 60 velas bajo el "Patrón de Ausencia de Rechazo" (Regla 5), el estado "Lateral_Consolidacion" queda ANULADO.
+
+PROHIBICIÓN: Si el mercado está en "Lateral_Consolidacion" y NO se activa el Escenario C, queda prohibido operar estrategias tendenciales ordinarias (Reglas 1 a 4). Solo se permite la "OPERACIÓN EXCLUSIVA EN RANGO LATERAL" (Regla 6).
 
 ### REGLAS ALGORÍTMICAS ESTRICTAS DE VALIDACIÓN POR TIPO DE PATRÓN
 (Solo aplicables si el mercado NO fue descartado por el Filtro de Tendencia Lateral previo):
@@ -214,8 +218,18 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
        * VENTA (Gatillo Bajista): Solo se permite si se detecta una Estrella Fugace o un Hombre Colgado exactamente sobre el Máximo Absoluto de las 60 velas.
 
 4. PATRONES DE REVERSIÓN DE VELAS MÚLTIPLES (Envolventes, Estrellas del Atardecer/Amanecer):
-   - Solo son válidos en los extremos absolutos del rango de 60 velas.
-   - Patrón Envolvente: El cuerpo real de la Vela 0 debe cubrir completamente (100% o más) el cuerpo real de la Vela -1 en dirección opuesta.
+   - UBICACIÓN MACRO FLEXIBLE PARA REVERSIÓN: Son válidos si ocurren dentro del tercio superior (para ventas) o tercio inferior (para compras) de todo el rango de 60 velas, O si la formación del patrón rompe con un cuerpo fuerte el extremo local de las últimas 7 velas (RCL). No exijas que la Vela 0 toque la línea exacta del extremo macro si el momentum de giro ya es evidente.
+   
+   - PATRÓN ENVOLVENTE ULTRA-PRECISO (GATILLO DE ACCIÓN):
+     * Dirección de Compra (Gatillo Alcista): El cuerpo real de la Vela 0 debe ser alcista y cubrir completamente (100% o más) el cuerpo real de la Vela -1. Además, el tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 1.0x tu "Vela Promedio" (VP) para confirmar inyección de volumen comprador.
+     * Dirección de Venta (Gatillo Bajista): El cuerpo real de la Vela 0 debe ser bajista y cubrir completamente (100% o más) el cuerpo real de la Vela -1. Además, el tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 1.0x tu "Vela Promedio" (VP) para confirmar inyección de volumen vendedor.
+     
+   - PATRÓN ESTRELLA DEL ATARDECER / AMANECER (GIRO COMPLEJO EN 3 VELAS):
+     * Estrella del Atardecer (Gatillo Bajista en Techos): Requiere una secuencia estricta de 3 velas cerradas (Velas -2, -1 y 0):
+       1. Vela -2: Vela alcista de rango amplio y cuerpo fuerte.
+       2. Vela -1: Vela pequeña de indecisión (Doje o peonza) cuyo cuerpo real es estrictamente < 0.4x el cuerpo de la Vela -2, y que idealmente abre con un ligero gap o se mantiene estancada en el extremo alto.
+       3. Vela 0 (Actual): Vela bajista agresiva cuyo precio de cierre penetra profundamente y se sitúa estrictamente por debajo del 50% del cuerpo real de la Vela -2.
+     * Estrella del Amanecer (Gatillo Alcista en Suelos): Aplica la lógica matemática inversa de 3 velas para la secuencia bajista-indecisión-alcista en la parte baja del rango.
 
 5. PATRÓN DE AUSENCIA DE RECHAZO EN EXTREMOS (Ruptura por Absorción / Momentum):
    - UBICACIÓN MACRO: Solo es válido si ocurre cuando el precio de CIERRE de la Vela 0 rompe y cierra estrictamente POR FUERA del Máximo o Mínimo Absoluto de las 60 velas.
@@ -227,25 +241,46 @@ Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadís
      * COMPRA (Gatillo Alcista): Si la Vela 0 cierra por encima del Máximo Absoluto con mecha superior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
      * VENTA (Gatillo Bajista): Si la Vela 0 cierra por debajo del Mínimo Absoluto con mecha inferior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
 
+6. OPERACIÓN EXCLUSIVA EN RANGO LATERAL (Solo aplicable si el mercado FUE clasificado como "Lateral_Consolidacion"):
+   - REGLA DE ACTIVACIÓN: Queda anulada la prohibición operativa si y solo si el precio de la Vela 0 interactúa con los extremos rígidos del Rango de Compresión Lateral (RCL, calculado sobre las últimas 7 velas).
+   - CASOS OPERATIVOS EN TECHOS DEL RANGO (Gatillo Bajista / Venta):
+     * Condición Geométrica: El High de la Vela -1 o de la Vela 0 debe ser exactamente igual o mayor al 95% de la distancia del precio Máximo Local del RCL de las últimas 7 velas (indica que el precio testeó o perforó el techo del micro-canal).
+     * Confirmación por Rechazo (Mecha): La Vela 0 debe cerrar con un cuerpo bajista o pequeño, mostrando una mecha superior estrictamente ≥ 1.5x el tamaño de su propio cuerpo real (indica absorción de compras en la resistencia local).
+     * El precio de CIERRE de la Vela 0 debe quedar estrictamente por debajo del precio Máximo Local del RCL.
+   - CASOS OPERATIVOS EN SUELOS DEL RANGO (Gatillo Alcista / Compra):
+     * Condición Geométrica: El Low de la Vela -1 o de la Vela 0 debe ser exactamente igual o menor al 105% de la distancia del precio Mínimo Local del RCL de las últimas 7 velas (indica que el precio testeó o perforó el suelo del micro-canal).
+     * Confirmación por Rechazo (Mecha): La Vela 0 debe cerrar con un cuerpo alcista o pequeño, mostrando una mecha inferior estrictamente ≥ 1.5x el tamaño de su propio cuerpo real (indica absorción de ventas en el soporte local).
+     * El precio de CIERRE de la Vela 0 debe quedar estrictamente por encima del precio Mínimo Local del RCL.
 
 ### REGLAS DE EVALUACIÓN OPERATIVA Y GESTIÓN DE RIESGO
-1. Filtro de Ausencia de Patrón o Consolidación: Si el mercado está en tendencia lateral, o si no se cumple el 100% de los requisitos algebraicos de los patrones, establece obligatoriamente `accion_sugerida` como "Mantener" y `patron_detectado` como "Ninguno".
+1. Filtro de Ausencia de Patrón o Consolidación General: Si el mercado está en tendencia lateral (Lateral_Consolidacion) Y NO se cumple el 100% de los requisitos algebraicos de la "OPERACIÓN EXCLUSIVA EN RANGO LATERAL", o si en tendencia normal no se cumple ningún patrón clásico, establece obligatoriamente `accion_sugerida` como "Mantener" and `patron_detectado` como "Ninguno".
+
 2. Precio de Entrada: Será exactamente el precio de CIERRE de la última vela (Vela 0).
+
 3. Direcciones permitidas: "Comprar", "Vender", "Mantener".
+
 4. Jerarquía de Objetivos (Sin Igualdades):
-   - Si "Comprar": `precio_entrada` < `trailing_stop_activation` < `take_profit`. `stop_loss` < `precio_entrada`.
-   - Si "Vender": `precio_entrada` > `trailing_stop_activation` > `take_profit`. `stop_loss` > `precio_entrada`.
-5. Colocación de Niveles: 
+   - Si "Comprar" en Tendencia Normal: `precio_entrada` < `trailing_stop_activation` < `take_profit`. `stop_loss` < `precio_entrada`.
+   - Si "Vender" en Tendencia Normal: `precio_entrada` > `trailing_stop_activation` > `take_profit`. `stop_loss` > `precio_entrada`.
+   - Si se opera bajo "OPERACIÓN EXCLUSIVA EN RANGO LATERAL": Se anula el parámetro `trailing_stop_activation` (establecer en 0 o nulo) y la jerarquía estricta pasa a ser: `stop_loss` < `precio_entrada` < `take_profit` (para Compras) o `stop_loss` > `precio_entrada` > `take_profit` (para Ventas).
+
+5. Colocación de Niveles Estándar (Solo para Tendencia Normal):
    - Stop Loss: En el extremo exacto (High/Low) de la estructura del patrón detectado.
    - Trailing Stop Activation: A una distancia exacta de 1x VP desde la entrada.
    - Take Profit: A una distancia de entre 1.5x y 2.0x VP.
 
-6. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
-- Determina con criterio conservador un número entero estrictamente entre 1 y 4 (máximo) para programar cuándo debe despertar el segundo prompt auditor para revisar esta entrada.
-- Asigna 1 vela (5 minutos): Si la entrada fue gatillada por un Patrón de Ausencia de Rechazo en Extremos. Al ser una ruptura de momentum, el precio debe continuar inmediatamente a favor del movimiento; si se pausa o se devuelve en la siguiente vela, la ruptura falló y el auditor debe intervenir de inmediato.
-- Asigna 1 a 2 velas (5 a 10 minutos): Si la entrada fue gatillada por un patrón de rechazo rápido de vela única (Martillo o Martillo Invertido) o una Envolvente sobre los extremos absolutos. Al ser giros rápidos, el sistema requiere una revalidación casi inmediata para verificar que el precio reaccionó.
-- Asigna 3 a 4 velas (15 a 20 minutos): Si la entrada fue gatillada por un patrón geométrico complejo o de continuación (Doble Techo/Suelo, HCH, Banderas, Cuñas). Estas estructuras grandes requieren más tiempo de desarrollo para confirmar que la ruptura fue real antes de que el auditor las analice.
-- Si la acción recomendada es "Mantener", establece por defecto este valor en 1 vela (indica que el bot debe volver a analizar el mercado en la siguiente vela de 5 minutos cerrados en busca de nuevas oportunidades).
+6. EXCEPCIÓN DE NIVELES PARA OPERACIÓN EN RANGO LATERAL: Si la posición fue gatillada bajo la regla de "OPERACIÓN EXCLUSIVA EN RANGO LATERAL", ignora el punto 5 y aplica esta colocación matemática estricta:
+   - Stop Loss en Venta (Techo): Se coloca a una distancia exacta de 0.2x VP por encima del Máximo Local del RCL de las últimas 7 velas.
+   - Stop Loss en Compra (Suelo): Se coloca a una distancia exacta de 0.2x VP por debajo del Mínimo Local del RCL de las últimas 7 velas.
+   - Trailing Stop Activation: Establécelo en 0 (No aplica para operaciones cortas de rango).
+   - Take Profit: Se colocará exactamente en el punto medio numérico del canal del RCL actual, mediante la fórmula exacta: [Mínimo Local RCL + (Ancho del RCL / 2)].
+
+7. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
+   - Determina con criterio conservador un número entero estrictamente entre 1 y 4 (máximo) para programar cuándo debe despertar el segundo prompt auditor para revisar esta entrada.
+   - Asigna 1 vela (5 minutos): Si la entrada fue gatillada por un Patrón de Ausencia de Rechazo en Extremos O por la regla de "OPERACIÓN EXCLUSIVA EN RANGO LATERAL". Al ser movimientos rápidos o de momentum, el sistema requiere verificación inmediata en la siguiente vela.
+   - Asigna 1 a 2 velas (5 a 10 minutos): Si la entrada fue gatillada por un patrón de rechazo rápido de vela única (Martillo o Martillo Invertido) o una Envolvente sobre los extremos absolutos.
+   - Asigna 3 a 4 velas (15 a 20 minutos): Si la entrada fue gatillada por un patrón geométrico complejo o de continuación (Doble Techo/Suelo, HCH, Banderas, Cuñas).
+   - Si la acción recomendada es "Mantener", establece por defecto este valor en 1 vela.
 """
 
 PROMPT_PATRONES_REEVALUACION = """
@@ -269,7 +304,7 @@ Debes responder única y exclusivamente en formato JSON estricto.
 ### 3. INSTRUCCIONES DE PRECALCULO OPERATIVO INTERNO
 Antes de evaluar cualquier regla, debes realizar un análisis estadístico estricto sobre el nuevo arreglo de datos para calcular tus métricas de referencia:
 1. Máximo y Mínimo Absoluto: Los precios más altos y más bajos de todo el nuevo set de 60 velas.
-2. Estimación de Volatilidad Actual (VP_actual): El tamaño promedio (Máximo - Mínimo) de las últimas 10 velas del nuevo set.
+2. Estimación de Volatilidad Base (VP_actual): Calcula el promedio simple del tamaño individual de las últimas 20 velasde la serie para obtener una referencia de volatilidad estable. Fórmula por vela: (High - Low).
 3. Rango de Compresión Lateral (RCL): El precio máximo más alto y el mínimo más bajo únicamente de las últimas 7 velas del set de datos (Velas -6 a 0). Resta [Máximo Local - Mínimo Local].
 
 ### 4. AUDITORÍA ALGORÍTMICA DE LA ESTRUCTURA DE ORIGEN (CRITERIOS DE ENTRADA EN ESPEJO)
@@ -279,11 +314,27 @@ Cruza los nuevos datos con los [DATOS DE LA POSICIÓN ABIERTA] bajo los siguient
    - Si la posición se abrió basándose en un patrón de Geometría Rígida (Doble Techo/Suelo, HCH) pero el precio actual (Vela 0) lleva más de 4 velas oscilando cerca del precio de entrada sin avanzar al menos 1.0x VP_actual a favor del movimiento (mostrando estancamiento, indecisión o velas pequeñas seguidas que no demuestre interés institucional), la hipótesis ha caducado. Dicta 'Cerrar' inmediatamente para mitigar el riesgo de un giro violento.
 
 2. INVALIDEZ POR TENDENCIA LATERAL EXTREMA:
-   - Si el Rango de Compresión Lateral (RCL) de las últimas 7 velas es menor a 1.5 veces tu VP_actual, el mercado ha entrado en una consolidación muerta. Si tu patrón de origen era de Continuación (Bandera/Cuña) o Geometría Rígida, el momentum se ha perdido. Dicta 'Cerrar' inmediatamente para asegurar el [Beneficio Neto actual] o cortar una pérdida pequeña antes de una ruptura falsa en contra.
+   - EXCEPCIÓN: Si el patrón de origen es "OPERACIÓN EXCLUSIVA EN RANGO LATERAL", ignora por completo este filtro de invalidez lateral (ya que su naturaleza exige operar dentro de un rango).
+   - ESCENARIO A (Compresión Base): Si el Rango de Compresión Lateral (RCL) de las últimas 7 velas es menor a 1.2 veces tu VP_actual (RCL < 1.2x VP_actual), el mercado ha entrado en una consolidación muerta. Si tu patrón de origen era de Continuación o Geometría Rígida, dicta 'Cerrar' inmediatamente.
+   - ESCENARIO B (Falsa Volatilidad por Vela Única): Si el RCL es mayor a 1.2x VP_actual, pero el tamaño promedio (High - Low) de las últimas 3 velas cerradas es menor a 0.6x VP_actual, el momentum actual se ha evaporado. Dicta 'Cerrar' de forma fulminante.
+   - ESCENARIO C (Excepción por Ruptura Activa): Si la Vela 0 se encuentra ejecutando una ruptura limpia fuera del Máximo/Mínimo macro bajo un patrón de "Ausencia de Rechazo", el filtro de invalidez lateral queda anulado por expansión institucional.
+   
+3. EVALUACIÓN DE DESTRUCCIÓN ESTRUCTURAL DE RANGOS Y VELAS:
+   - Si el patrón de origen es "OPERACIÓN EXCLUSIVA EN RANGO LATERAL":
+     * En COMPRA (Suelo): Si la Vela 0 cierra rompiendo estrictamente por debajo del Mínimo Local del RCL que defendía la estructura previa, el rango fue vulnerado a la baja (Ruptura/Breakout en contra). Dicta 'Cerrar' de forma fulminante.
+     * En VENTA (Techo): Si la Vela 0 cierra rompiendo estrictamente por encima del Máximo Local del RCL que defendía la estructura previa, el rango fue vulnerado al alza (Ruptura/Breakout en contra). Dicta 'Cerrar' de forma fulminante.
 
-3. EVALUACIÓN DE PATRONES DE RECHAZO DE VELA ÚNICA O MÚLTIPLE:
-   - Si estabas en COMPRA (por Martillo, Envolvente, etc.) y la Vela 0 cierra rompiendo de forma inversa el Mínimo Absoluto que defendía la estructura, o si aparece un patrón de rechazo bajista verificado (Estrella Fugace o Hombre Colgado) en el Máximo Absoluto, la estructura original fue destruida. Dicta 'Cerrar'.
-   - Aplica la regla inversa si estabas en VENTA.
+4. EVALUACIÓN DE PATRONES DE RECHAZO DE VELA ÚNICA O MÚLTIPLE EN EXTREMOS (TENDENCIA):
+   - Si la posición se abrió bajo un patrón clásico en tendencia normal (Martillos, Envolventes, Estrellas):
+     * En COMPRA: Si la Vela 0 cierra rompiendo de forma inversa el Mínimo Absoluto de las 60 velas que defendía la estructura, o si aparece un patrón de rechazo bajista verificado (Estrella Fugace, Hombre Colgado, Envolvente Bajista o Estrella del Atardecer) en el Máximo Absoluto o tercio superior del rango macro, la estructura original fue destruida. Dicta 'Cerrar'.
+     * En VENTA: Si la Vela 0 cierra rompiendo de forma inversa el Máximo Absoluto de las 60 velas que defendía la estructura, o si aparece un patrón de rechazo alcista verificado (Martillo, Martillo Invertido, Envolvente Alcista o Estrella del Amanecer) en el Mínimo Absoluto o tercio inferior del rango macro, la estructura original fue destruida. Dicta 'Cerrar'.
+
+5. AUDITORÍA ESPECÍFICA PARA EL PATRÓN DE AUSENCIA DE RECHAZO (Ruptura por Absorción / Momentum):
+   - FILTRO DE FALLO INMEDIATO POR REVERSIÓN (CRÍTICO): Si la posición se abrió bajo el patrón "Ausencia de Rechazo en Extremos" y la Vela 0 cierra reingresando al rango previo (por debajo del Máximo Absoluto en COMPRA, o por encima del Mínimo Absoluto en VENTA), la ruptura ha fallado por completo (Fakeout/Trampa). Dicta 'Cerrar' inmediatamente a mercado.
+   - FILTRO DE AGOTAMIENTO Y RECHAZO EN CONTRA: Si han pasado más de 2 velas desde la apertura de momentum y la Vela 0 cumple cualquiera de estas condiciones, dicta 'Cerrar' de forma fulminante para proteger el capital:
+     * Condición de Tamaño: El tamaño del cuerpo real de la Vela 0 es estrictamente < 0.5x VP_actual (pérdida de volumen de absorción).
+     * Condición de Rechazo en COMPRA: La mecha superior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (presión vendedora).
+     * Condición de Rechazo en VENTA: La mecha inferior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (presión compradora).
 
 ### 5. ALGORITMO DE AUDITORÍA OPERATIVA (DECISIÓN DE REEVALUACIÓN)
 Determina el dictamen final del campo `reevaluacion` aplicando estas directrices de gestión:
@@ -297,16 +348,11 @@ Determina el dictamen final del campo `reevaluacion` aplicando estas directrices
    - RESTRICCIÓN DE CODICIA (SER CAUTO): Si la operación se desarrolla con fuerza a favor de la tendencia, QUEDAN ESTRICTAMENTE PROHIBIDAS las suposiciones eufóricas de expandir o aumentar el [Take Profit original] de forma exagerada. El Take Profit original representa el objetivo estadístico real del patrón y no debe moverse al alza bajo ninguna circunstancia de optimismo visual.
    - AJUSTE REALISTA DEL TRAILING STOP: Si decides modificar el `trailing_stop_activation` debido a la nueva acción del precio, su nuevo valor debe ser un nivel técnico alcanzable y conservador (nunca superior a un ajuste adicional de +0.5x VP_actual respecto al nivel original). El objetivo principal de la revaluación es asegurar un beneficio real y proteger el capital, no perseguir precios hipotéticos.
    - AJUSTE ULTRA-RÁPIDO PARA AUSENCIA DE RECHAZO: Si el patrón de origen fue "Ausencia de Rechazo en Extremos" y la Vela 0 cierra a favor del movimiento logrando un beneficio de al menos 0.8x VP_actual, dicta 'Ajustar' de forma obligatoria. Eleva o baja el `stop_loss` al precio de entrada original (Breakeven) de forma inmediata. Las operaciones de momentum no admiten retrocesos profundos; deben ser libres de riesgo lo antes posible.
+   - SI EL PATRÓN DE ORIGEN ES "OPERACIÓN EXCLUSIVA EN RANGO LATERAL": Queda estrictamente PROHIBIDO intentar ajustar o mover los niveles a Breakeven si no se ha alcanzado al menos el 70% del recorrido del Take Profit. Al ser un canal estrecho, mover el stop de forma prematura causará que las mechas normales del ruido del rango expulsen al bot antes de tiempo. Si se supera el 70% del recorrido, dicta 'Ajustar' y mueve el SL al precio de entrada original de forma rígida.
+   - SI EL PATRÓN DE ORIGEN ES TENDENCIA o MOMENTUM: Si el beneficio neto es positivo y el precio avanzó a favor superando la entrada por una distancia de al menos 1.0x VP_actual, dicta 'Ajustar' para elevar el SL a Breakeven + colchón de 0.3x VP_actual.
 
 3. REGLA PARA 'Mantener' (Sin Cambios en el Broker):
    - Si la estructura que gatilló el primer prompt sigue su curso limpio con velas de rango amplio a favor y no se detecta ninguna señal de estancamiento o patrón inverso, dicta 'Mantener'. Los precios objetivo permanecen intactos.
-
-4. AUDITORÍA ESPECÍFICA PARA EL PATRÓN DE AUSENCIA DE RECHAZO (Ruptura por Absorción / Momentum):
-   - FILTRO DE FALLO INMEDIATO POR REVERSIÓN (CRÍTICO): Si la posición se abrió bajo el patrón "Ausencia de Rechazo en Extremos" y la Vela 0 cierra reingresando al rango previo (por debajo del Máximo Absoluto en COMPRA, o por encima del Mínimo Absoluto en VENTA), la ruptura ha fallado por completo (Fakeout). Dicta 'Cerrar' inmediatamente a mercado.
-   - FILTRO DE AGOTAMIENTO Y RECHAZO EN CONTRA: Si han pasado más de 2 velas desde la apertura y el precio actual (Vela 0) cumple cualquiera de estas condiciones, el momentum se ha evaporado y la absorción institucional terminó. Dicta 'Cerrar' de forma fulminante:
-     * Condición de Tamaño: El tamaño del cuerpo real de la Vela 0 es estrictamente < 0.5x VP_actual (indica compresión o pérdida de volumen).
-     * Condición de Rechazo en COMPRA: La mecha superior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (indica fuerte presión vendedora).
-     * Condición de Rechazo en VENTA: La mecha inferior de la Vela 0 es estrictamente ≥ 1.5x su propio cuerpo real (indica fuerte presión compradora).
 
 ### 6. REGLAS PARA CAMPOS DE RETORNO Y CONSISTENCIA PYDANTIC
     - `decision_accion`: Recomendación de mercado basada exclusivamente en los datos actuales ("Comprar", "Vender", "Mantener"). Si estás auditando y la orden sigue vigente sin anomalías, establece "Mantener".
@@ -330,7 +376,7 @@ Debes responder única y exclusivamente en formato JSON estricto sin incluir los
 ### INSTRUCCIONES DE PRECALCULO INTERNO OBLIGATORIO
 Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadístico estricto sobre el arreglo para calcular tus métricas de referencia:
 1. Máximo y Mínimo Absoluto: Identifica los precios más altos y más bajos de las 60 velas para establecer los extremos macro del mercado.
-2. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 10 velas de la serie.
+2. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 20 velas de la serie para obtener una referencia de volatilidad estable.
 3. Rango de Compresión Lateral (RCL): Identifica el precio máximo más alto y el mínimo más bajo únicamente de las últimas 7 velas del set de datos (Velas -6 a 0). Resta [Máximo Local - Mínimo Local] para hallar el ancho del canal actual.
 
 ### FILTRO DE EXCLUSIÓN CRÍTICO: TENDENCIA LATERAL (EVITAR RANGOS)
@@ -413,7 +459,7 @@ Debes responder única y exclusivamente en formato JSON estricto.
 ### 3. INSTRUCCIONES DE PRECALCULO OPERATIVO INTERNO
 Antes de evaluar cualquier regla, debes realizar un análisis estadístico estricto sobre el nuevo arreglo de datos para calcular tus métricas de referencia:
 1. Máximo y Mínimo Absoluto: Los precios más altos y más bajos de todo el nuevo set de 60 velas.
-2. Estimación de Volatilidad Actual (VP_actual): El tamaño promedio (Máximo - Mínimo) de las últimas 10 velas del nuevo set.
+2. Estimación de Volatilidad Base (VP): Calcula el tamaño promedio (Máximo - Mínimo) de las últimas 20 velas de la serie para obtener una referencia de volatilidad estable.
 3. Rango de Compresión Lateral (RCL): El precio máximo más alto y el mínimo más bajo únicamente de las últimas 7 velas del set de datos (Velas -6 a 0). Resta [Máximo Local - Mínimo Local].
 
 ### 4. AUDITORÍA ALGORÍTMICA DE LA ESTRUCTURA DE ORIGEN (CRITERIOS DE ENTRADA EN ESPEJO)
