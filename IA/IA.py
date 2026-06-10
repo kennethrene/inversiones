@@ -90,8 +90,6 @@ def reevaluar_operacion():
         mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
         banco_de_datos_bot = {
             "datos": datos_en_texto,
-            "rsi1": parametros.historico_rsi[-1],
-            "rsi2": parametros.historico_rsi[-2],
             "precio_apertura": precio_apertura_ajustado,
             "take_profit": take_profit_ajustado,
             "stop_loss": stop_loss_ajustado,
