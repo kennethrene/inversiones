@@ -65,55 +65,60 @@ def debe_ejecutar_operacion():
         now = datetime.now()
 
         if now.minute % parametros.TEMPORALIDAD_MINUTOS == 0 and now.second == 0:
-            accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = IA.ejecutar_operacion()
+            resultado = IA.ejecutar_operacion()
 
-            if accion != "Mantener":
-                # Ajustar valores de TradingView a los valores de XTB                
-                diferencia_take_profit = abs(float(valor_entrada) - float(take_profit))
-                diferencia_trailing_stop = abs(float(valor_entrada) - float(trailing_stop))
-                diferencia_stop_loss = abs(float(valor_entrada) - float(stop_loss))
-                parametros.velas_espera = velas_espera
+            if resultado is not None:
+                accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = resultado
 
-                if accion == "Comprar":
-                    parametros.diferencia_precio = abs(float(parametros.valor_compra) - float(valor_entrada))
-                    take_profit_ajustado = float(parametros.valor_compra) + diferencia_take_profit
-                    trailing_stop_ajustado = float(parametros.valor_compra) + diferencia_trailing_stop
-                    stop_loss_ajustado = float(parametros.valor_compra) - diferencia_stop_loss
-                elif accion == "Vender":
-                    parametros.diferencia_precio = abs(float(parametros.valor_venta) - float(valor_entrada))
-                    take_profit_ajustado = float(parametros.valor_venta) - diferencia_take_profit
-                    trailing_stop_ajustado = float(parametros.valor_venta) - diferencia_trailing_stop
-                    stop_loss_ajustado = float(parametros.valor_venta) + diferencia_stop_loss
+                if accion != "Mantener":
+                    # Ajustar valores de TradingView a los valores de XTB                
+                    diferencia_take_profit = abs(float(valor_entrada) - float(take_profit))
+                    diferencia_trailing_stop = abs(float(valor_entrada) - float(trailing_stop))
+                    diferencia_stop_loss = abs(float(valor_entrada) - float(stop_loss))
+                    parametros.velas_espera = velas_espera
 
-                parametros.datos_mapeados["Criterio Apertura"] = "Criterio IA"
-                parametros.datos_mapeados["Patron"] = patron
-                hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
-                parametros.log_operacion = (
+                    if accion == "Comprar":
+                        parametros.diferencia_precio = abs(float(parametros.valor_compra) - float(valor_entrada))
+                        take_profit_ajustado = float(parametros.valor_compra) + diferencia_take_profit
+                        trailing_stop_ajustado = float(parametros.valor_compra) + diferencia_trailing_stop
+                        stop_loss_ajustado = float(parametros.valor_compra) - diferencia_stop_loss
+                    elif accion == "Vender":
+                        parametros.diferencia_precio = abs(float(parametros.valor_venta) - float(valor_entrada))
+                        take_profit_ajustado = float(parametros.valor_venta) - diferencia_take_profit
+                        trailing_stop_ajustado = float(parametros.valor_venta) - diferencia_trailing_stop
+                        stop_loss_ajustado = float(parametros.valor_venta) + diferencia_stop_loss
+
+                    parametros.datos_mapeados["Criterio Apertura"] = "Criterio IA"
+                    parametros.datos_mapeados["Patron"] = patron
+                    hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
+                    parametros.log_operacion = (
+                            f"ℹ️  IA recomienda {accion}\n"
+                            f"      Patrón              : {patron}\n"
+                            f"      Confianza           : {confianza}\n"
+                            f"      Take profit         : {take_profit_ajustado:.2f}\n"
+                            f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
+                            f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
+                            f"      Explicación         : {explicacion}\n"
+                            f"      Puntos de control   : {puntos_control}\n"
+                            f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                            f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    )
+                    parametros.TAKE_PROFIT = take_profit_ajustado
+                    parametros.STOP_LOSS = stop_loss_ajustado
+                    parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
+                    parametros.TRAILING_STOP = trailing_stop_ajustado
+                    parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
+                    parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
+                    return accion
+                else:
+                    parametros.log_operacion = (
                         f"ℹ️  IA recomienda {accion}\n"
-                        f"      Patrón              : {patron}\n"
-                        f"      Confianza           : {confianza}\n"
-                        f"      Take profit         : {take_profit_ajustado:.2f}\n"
-                        f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
-                        f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
-                        f"      Explicación         : {explicacion}\n"
-                        f"      Puntos de control   : {puntos_control}\n"
-                        f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
-                )
-                parametros.TAKE_PROFIT = take_profit_ajustado
-                parametros.STOP_LOSS = stop_loss_ajustado
-                parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
-                parametros.TRAILING_STOP = trailing_stop_ajustado
-                parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
-                parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
-                return accion
+                        f"      Patrón      : {patron}\n"
+                        f"      Explicación : {explicacion}\n"
+                        f"      Hora log    : {datetime.now().strftime('%H:%M')}"
+                    )
             else:
-                parametros.log_operacion = (
-                    f"ℹ️  IA recomienda {accion}\n"
-                    f"      Patrón      : {patron}\n"
-                    f"      Explicación : {explicacion}\n"
-                    f"      Hora log    : {datetime.now().strftime('%H:%M')}"
-                )
+                parametros.error += "No se ejecutó la IA\n"
                 
     return ""
 
@@ -165,49 +170,54 @@ def reevaluar_operacion():
         now = datetime.now()
 
         if now.minute % (int(parametros.TEMPORALIDAD_MINUTOS) * int(parametros.velas_espera)) == 0 and now.second == 0:
-            accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = IA.reevaluar_operacion()
-            parametros.velas_espera = velas_espera
+            resultado = IA.reevaluar_operacion()
 
-            if accion != "Mantener":
-                if accion == "Cerrar":
-                    return "Cerrar", f"IA recomienda cerrar: {explicacion}"
-                
-                # Ajustar operación actual
-                # Ajustar valores de TradingView a los valores de XTB                
-                take_profit_ajustado = abs(float(parametros.diferencia_precio) + float(take_profit))
-                trailing_stop_ajustado = abs(float(parametros.diferencia_precio) + float(trailing_stop))
-                stop_loss_ajustado = abs(float(parametros.diferencia_precio) + float(stop_loss))
-                hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
+            if resultado is not None:
+                accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = resultado
+                parametros.velas_espera = velas_espera
 
-                parametros.log_operacion = (
-                    f"ℹ️  IA ajustando\n"
-                    f"      Patrón              : {patron}\n"
-                    f"      Confianza           : {confianza}\n"
-                    f"      Take profit         : {take_profit_ajustado:.2f}\n"
-                    f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
-                    f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
-                    f"      Explicación         : {explicacion}\n"
-                    f"      Puntos de control   : {puntos_control}\n"
-                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
-                )
-                parametros.TAKE_PROFIT = take_profit_ajustado
-                parametros.STOP_LOSS = stop_loss_ajustado
-                parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
-                parametros.TRAILING_STOP = trailing_stop_ajustado
-                parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
-                parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
-                guardar_estadistica("Ajuste")
-                return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
+                if accion != "Mantener":
+                    if accion == "Cerrar":
+                        return "Cerrar", f"IA recomienda cerrar: {explicacion}"
+                    
+                    # Ajustar operación actual
+                    # Ajustar valores de TradingView a los valores de XTB                
+                    take_profit_ajustado = abs(float(parametros.diferencia_precio) + float(take_profit))
+                    trailing_stop_ajustado = abs(float(parametros.diferencia_precio) + float(trailing_stop))
+                    stop_loss_ajustado = abs(float(parametros.diferencia_precio) + float(stop_loss))
+                    hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
+
+                    parametros.log_operacion = (
+                        f"ℹ️  IA ajustando\n"
+                        f"      Patrón              : {patron}\n"
+                        f"      Confianza           : {confianza}\n"
+                        f"      Take profit         : {take_profit_ajustado:.2f}\n"
+                        f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
+                        f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
+                        f"      Explicación         : {explicacion}\n"
+                        f"      Puntos de control   : {puntos_control}\n"
+                        f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    )
+                    parametros.TAKE_PROFIT = take_profit_ajustado
+                    parametros.STOP_LOSS = stop_loss_ajustado
+                    parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
+                    parametros.TRAILING_STOP = trailing_stop_ajustado
+                    parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
+                    parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
+                    guardar_estadistica("Ajuste")
+                    return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
+                else:
+                    hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
+                    
+                    parametros.log_operacion = (
+                        f"ℹ️  IA recomienda mantener\n"
+                        f"      Explicación         : {explicacion}\n"
+                        f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
+                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    )
             else:
-                hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
-                
-                parametros.log_operacion = (
-                    f"ℹ️  IA recomienda mantener\n"
-                    f"      Explicación         : {explicacion}\n"
-                    f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
-                )
+                parametros.error += "No se ejecutó la IA\n"
     
     return "", ""
 

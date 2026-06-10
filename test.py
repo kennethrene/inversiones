@@ -13,7 +13,11 @@ parametros.diferencia_precio = 50
 parametros.datos_mapeados["Patron"] = 'Doble Suelo'
 parametros.datos_mapeados['Beneficio Neto'] = -6.97
 
-accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = IA.ejecutar_operacion()
-#accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = IA.reevaluar_operacion()
+resultado = IA.ejecutar_operacion()
+#resultado = IA.reevaluar_operacion()
+if resultado is None:
+    print("No se ejecutó la IA")
+else:
+    accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = resultado
 
-print(f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit} - Stop loss: {stop_loss} -  Trailing Stop: {trailing_stop} - Velas de espera: {velas_espera} - Explicación: {explicacion}")
+    print(f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit} - Stop loss: {stop_loss} -  Trailing Stop: {trailing_stop} - Velas de espera: {velas_espera} - Explicación: {explicacion}")

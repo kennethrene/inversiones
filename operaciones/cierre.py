@@ -96,12 +96,12 @@ def cierre_take_profit(beneficio_neto):
 
         return True, operacion_ganada, motivo_cierre
     elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
-        motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {parametros.TAKE_PROFIT}"
+        motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {float(parametros.TAKE_PROFIT):.2f}"
         operacion_ganada = True
 
         return True, operacion_ganada, motivo_cierre
     elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
-        motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {parametros.TAKE_PROFIT}"
+        motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {float(parametros.TAKE_PROFIT):.2f}"
         operacion_ganada = True
 
         return True, operacion_ganada, motivo_cierre

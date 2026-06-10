@@ -15,13 +15,14 @@ def ejecutar_operacion():
         num_velas = 61
 
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
-    datos_en_texto = formatear_velas_para_ia(velas)
 
-    banco_de_datos_bot = {
-        "datos": datos_en_texto
-    }
+    if velas is not None and len(velas) > 0:
+        datos_en_texto = formatear_velas_para_ia(velas)
 
-    if velas != None and len(velas) > 0:
+        banco_de_datos_bot = {
+            "datos": datos_en_texto
+        }
+        
         proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
         
         mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
@@ -46,24 +47,27 @@ def ejecutar_operacion():
         elif proveedor_activo == "Claude":
             objeto_validado = claude.ejecutar_prompt_inicial(modelo, prompt_plantilla, datos_en_texto, cache)
 
-        accion                  = objeto_validado.decision_accion
-        patron                  = objeto_validado.nombre_del_patron
-        explicacion             = objeto_validado.explicacion_tecnica
-        confianza               = objeto_validado.fiabilidad
-        take_profit             = objeto_validado.take_profit
-        stop_loss               = objeto_validado.stop_loss
-        trailing_stop           = objeto_validado.trailing_stop_activation
-        valor_entrada           = objeto_validado.precio_entrada
-        velas_espera            = objeto_validado.velas_espera_validacion
-        
-        if objeto_validado.puntos_control_patron is not None:
-            puntos_control = objeto_validado.puntos_control_patron
-        else:
-            puntos_control = []
+        if objeto_validado is not None:
+            accion          = objeto_validado.decision_accion
+            patron          = objeto_validado.nombre_del_patron
+            explicacion     = objeto_validado.explicacion_tecnica
+            confianza       = objeto_validado.fiabilidad
+            take_profit     = objeto_validado.take_profit
+            stop_loss       = objeto_validado.stop_loss
+            trailing_stop   = objeto_validado.trailing_stop_activation
+            valor_entrada   = objeto_validado.precio_entrada
+            velas_espera    = objeto_validado.velas_espera_validacion
+            
+            if objeto_validado.puntos_control_patron is not None:
+                puntos_control = objeto_validado.puntos_control_patron
+            else:
+                puntos_control = []
 
-        return accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control
+            return (accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control)
+        else:
+            return None
     else:
-        parametros.error = "IA - No hay datos para analizar\n"
+        parametros.error = "IA - No se recibieron datos de velas\n"
 
 def reevaluar_operacion():
     num_velas = parametros.velas_espera
@@ -71,9 +75,10 @@ def reevaluar_operacion():
         num_velas = 61
 
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
-    datos_en_texto = formatear_velas_para_ia(velas)
 
-    if velas != None and len(velas) > 0 :
+    if velas is not None and len(velas) > 0:
+        datos_en_texto = formatear_velas_para_ia(velas)
+
         proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
 
         # Ajustar valores para TradingView (cuyos valores son mas bajos que XTB)
@@ -112,24 +117,27 @@ def reevaluar_operacion():
         elif proveedor_activo == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
 
-        reevaluacion            = objeto_validado.reevaluacion 
-        patron                  = objeto_validado.nombre_del_patron
-        explicacion_reeval      = objeto_validado.explicacion_reevaluacion
-        confianza               = objeto_validado.fiabilidad
-        take_profit             = objeto_validado.take_profit
-        stop_loss               = objeto_validado.stop_loss
-        trailing_stop           = objeto_validado.trailing_stop_activation
-        valor_entrada           = objeto_validado.precio_entrada
-        velas_espera            = objeto_validado.velas_espera_validacion
-        
-        if objeto_validado.puntos_control_patron is not None:
-            puntos_control = objeto_validado.puntos_control_patron
-        else:
-            puntos_control = []
+        if objeto_validado is not None:
+            reevaluacion       = objeto_validado.reevaluacion 
+            patron             = objeto_validado.nombre_del_patron
+            explicacion_reeval = objeto_validado.explicacion_reevaluacion
+            confianza          = objeto_validado.fiabilidad
+            take_profit        = objeto_validado.take_profit
+            stop_loss          = objeto_validado.stop_loss
+            trailing_stop      = objeto_validado.trailing_stop_activation
+            valor_entrada      = objeto_validado.precio_entrada
+            velas_espera       = objeto_validado.velas_espera_validacion
+            
+            if objeto_validado.puntos_control_patron is not None:
+                puntos_control = objeto_validado.puntos_control_patron
+            else:
+                puntos_control = []
 
-        return reevaluacion, patron, confianza, explicacion_reeval, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control
+            return (reevaluacion, patron, confianza, explicacion_reeval, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control)
+        else:
+            return None
     else:
-        parametros.error = "IA - No hay datos para analizar\n"
+        parametros.error = "IA - No se recibieron datos de velas\n"
 
 def formatear_velas_para_ia(datos):
     # Crear el encabezado para guiar la lectura del modelo

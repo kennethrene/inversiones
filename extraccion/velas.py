@@ -19,6 +19,9 @@ symbols = {
     "EURUSD": "EURUSD"
 }
 
+reintentos = 0
+max_reintentos = 3
+
 def extraer_velas(intervalo):
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
@@ -42,16 +45,28 @@ def extraer_velas(intervalo):
         parametros.error = "Error: No se recibieron datos de TradingView\n"
 
 def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
+    global reintentos, max_reintentos
+    reintentos = 0
+
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
 
     # 2. Descargar las últimas X velas de FX
-    df = tv.get_hist(
-        symbol=symbols.get(activo_actual),
-        exchange='FX', 
-        interval=intervalo,
-        n_bars=num_velas
-    )
+    while reintentos < max_reintentos:
+        try:
+            df = tv.get_hist(
+                symbol=symbols.get(activo_actual),
+                exchange='FX', 
+                interval=intervalo,
+                n_bars=num_velas
+            )
+            if df is not None and not df.empty:
+                break
+        except Exception as e:
+            pass
+
+        reintentos += 1
+        parametros.error = f"Error: No se recibieron datos de TradingView (Reintento {reintentos})\n"
 
     # 3. Procesar, renombrar columnas y convertir al formato solicitado
     if df is not None and not df.empty:
@@ -75,3 +90,7 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
             return parametros.lista_velas_acumuladas
     else:
         parametros.error = "Error: No se recibieron datos de TradingView\n"
+    
+    # Forzar la lectura de todas las velas en la próxima lectura
+    parametros.lista_velas_acumuladas = []
+    return None
