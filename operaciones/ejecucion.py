@@ -181,7 +181,7 @@ def reevaluar_operacion():
                         return "Cerrar", f"IA recomienda cerrar: {explicacion}"
                     
                     # Ajustar operación actual
-                    # Ajustar valores de TradingView a los valores de XTB                
+                    # Ajustar valores de TradingView a los valores de XTB
                     take_profit_ajustado = abs(float(parametros.diferencia_precio) + float(take_profit))
                     trailing_stop_ajustado = abs(float(parametros.diferencia_precio) + float(trailing_stop))
                     stop_loss_ajustado = abs(float(parametros.diferencia_precio) + float(stop_loss))

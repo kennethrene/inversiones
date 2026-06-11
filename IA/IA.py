@@ -3,6 +3,7 @@ import configuracion.parametros as parametros
 import configuracion.prompts as prompts
 from typing import Dict, Any, Optional
 from tvDatafeed import Interval
+import importlib
 import IA.gemini as gemini
 import IA.groq as groq
 import IA.deepseek as deepseek
@@ -27,9 +28,10 @@ def ejecutar_operacion():
         
         mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
         inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["inicial_inputs"] if k in banco_de_datos_bot}
+        prompt_inicial = importlib.import_module(f"IA.prompts.inicial.{mapa_prompts['version_inicial']}")
         
         if not cache:
-            prompt_plantilla = getattr(prompts, mapa_prompts["inicial"])
+            prompt_plantilla = getattr(prompt_inicial, mapa_prompts["inicial"])
         else:
             prompt_plantilla = getattr(prompts, mapa_prompts["inicial"] + "_CACHE")
 
@@ -101,9 +103,10 @@ def reevaluar_operacion():
         }
 
         inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["auditoria_inputs"] if k in banco_de_datos_bot}
+        prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{mapa_prompts['version_auditoria']}")
 
         if not cache:
-            prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"])
+            prompt_plantilla = getattr(prompt_reevaluacion, mapa_prompts["auditoria"])
         else:
             prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"] + "_CACHE")
 
@@ -181,6 +184,8 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
     
     # 5. Devolvemos directamente el mapeo de sus prompts asociados
     return {
+        "version_inicial": datos_estrategia["version_inicial"],
+        "version_auditoria": datos_estrategia["version_auditoria"],
         "estrategia": nombre_estrategia,
         "inicial": datos_estrategia["inicial"],
         "inicial_inputs": datos_estrategia["inicial_inputs"],

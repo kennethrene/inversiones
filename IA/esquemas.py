@@ -83,6 +83,15 @@ class AnalisisPatronGroq(BaseModel):
     )
 
 class AnalisisPatronGemini(BaseModel):
+    # CRÍTICO: Este campo va primero para forzar al LLM a calcular antes de decidir
+    proceso_pensamiento_interno_matematico: str = Field(
+        ..., 
+        description=(
+            "Escribe aquí paso a paso los cálculos numéricos (VP, RCL, BCA) y la "
+            "verificación secuencial de las reglas algebraicas ANTES de asignar "
+            "valores a los campos inferiores. Esto previene fallos lógicos."
+        )
+    )
     decision_accion: Literal["Comprar", "Vender", "Mantener"] = Field(
         ..., 
         description="La acción recomendada basada exclusivamente en el análisis de los datos."

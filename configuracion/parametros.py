@@ -64,7 +64,7 @@ USAR_IA = True
 HORAS_CACHE = 2
 MODELO_IA = {
     "Gemini": {
-        "activo": False,
+        "activo": True,
         "cache": False,
         "modelos": [
             {
@@ -82,7 +82,7 @@ MODELO_IA = {
         ]
     },
     "Groq": {
-        "activo": True,
+        "activo": False,
         "cache": False,
         "modelos": [
             {
@@ -130,6 +130,8 @@ MODELO_IA = {
 }
 TIPO_PROMPT = {
     "Patrones": {
+        "version_inicial": "1_1",
+        "version_auditoria": "1_0",
         "activo": True,
         "inicial": "PROMPT_PATRONES",
         "inicial_inputs": ["datos"],
@@ -140,11 +142,15 @@ TIPO_PROMPT = {
         ]
     },
     "Indicadores": {
+        "version_inicial": "1_0",
+        "version_auditoria": "1_0",
         "activo": False,
         "inicial": "to do",
         "auditoria": "to do"
     },
     "PatronesIndicadores": {
+        "version_inicial": "1_0",
+        "version_auditoria": "1_0",
         "activo": False,
         "inicial": "PROMPT_PATRONES_INDICADORES",
         "inicial_inputs": ["datos"],

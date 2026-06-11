@@ -13,6 +13,8 @@ cache_prompt_inicial = ""
 cache_prompt_reevaluacion = ""
 fecha_expiracion_cache_inicial = None
 fecha_expiracion_cache_reevaluacion = None
+reintentos = 0
+max_reintentos = 3
 
 def crear_cache_de_reglas_inicial(modelo: str, prompt_sistema_reglas: str):
     global cache_prompt_inicial, fecha_expiracion_cache_inicial
@@ -129,25 +131,37 @@ def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: st
         return None
 
 def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas):
-    if not cache:
-        
-        try:
-            response = cliente.models.generate_content(
-                    model=modelo,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=AnalisisPatronGemini,
-                        temperature=0.1
-                    ),
-                )
-            json_crudo_texto = response.text
+    global reintentos, max_reintentos
+    reintentos = 0
+    error = ""
 
-            return AnalisisPatronGemini.model_validate_json(json_crudo_texto)
-        except Exception as e:
-            parametros.error += traceback.format_exc()
-            # Forzar la lectura de todas las velas en la próxima lectura
-            parametros.lista_velas_acumuladas = []
+    if not cache:
+        while reintentos < max_reintentos:
+            try:
+                response = cliente.models.generate_content(
+                        model=modelo,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=AnalisisPatronGemini,
+                            temperature=0.1
+                        ),
+                    )
+                json_crudo_texto = response.text
+
+                return AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+            except Exception as e:
+                error = str(e)
+                parametros.lista_velas_acumuladas = []
+                pass
+
+            reintentos += 1
+            parametros.error = (
+                f"Error: No se ejecuto la IA de Gemini\n"
+                f"Modelo {modelo}\n"
+                f"Reintento {reintentos}\n"
+                f"{error}\n"
+            )
         
         return None
     else:
