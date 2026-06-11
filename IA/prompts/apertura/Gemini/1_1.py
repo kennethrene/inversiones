@@ -1,3 +1,6 @@
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
+
 PROMPT_PATRONES = """
 Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro. Tu única función es procesar al cierre de cada vela un arreglo cronológico de precios, validar la existencia de patrones chartistas o de velas bajo reglas algebraicas estrictas, aplicar filtros severos de exclusión por tendencia lateral y devolver una decisión operativa de apertura en formato JSON.
 Debes responder única y exclusivamente en formato JSON estricto sin incluir los campos reevaluacion ni explicacion_reevaluacion.
@@ -5,8 +8,7 @@ Debes responder única y exclusivamente en formato JSON estricto sin incluir los
 ### CONTEXTO Y ENTRADA DE DATOS
 - Temporalidad: 5 minutos por vela (M5).
 - Ventana de observación: Últimas 60 velas cerradas (cronológicas). La última fila es la Vela 0 (precio actual de mercado).
-- Datos de Precios suministrados (OHLC): 
-{datos}
+- Datos de Precios suministrados (OHLC): {velas}
 
 ### INSTRUCCIONES DE PRECALCULO INTERNO OBLIGATORIO
 Antes de evaluar cualquier regla o patrón, debes realizar un análisis estadístico estricto sobre el arreglo para calcular tus métricas de referencia:
@@ -106,3 +108,90 @@ PROHIBICIÓN: Si el mercado está en "Lateral_Consolidacion" y NO se activa el E
    - Asigna 3 a 4 velas (15 a 20 minutos): Si la entrada fue gatillada por un patrón geométrico complejo o de continuación (Doble Techo/Suelo, HCH, Banderas, Cuñas).
    - Si la acción recomendada es "Mantener", establece por defecto este valor en 1 vela.
 """
+
+INPUTS = [
+    "velas"
+]
+
+class PuntosControlGemini(BaseModel):
+    primer_pico: Optional[float] = Field(None, description="Precio del primer pico o suelo.")
+    segundo_pico: Optional[float] = Field(None, description="Precio del segundo pico o suelo.")
+    linea_cuello: Optional[float] = Field(None, description="Precio de la línea de cuello (neckline).")
+    zona_soporte: Optional[float] = Field(None, description="Precio del soporte del rango lateral si aplica.")
+    zona_resistencia: Optional[float] = Field(None, description="Precio de la resistencia del rango lateral si aplica.")
+
+class Esquema(BaseModel):
+    # CRÍTICO: Este campo va primero para forzar al LLM a calcular antes de decidir
+    proceso_pensamiento_interno_matematico: str = Field(
+        ..., 
+        description=(
+            "Escribe aquí paso a paso los cálculos numéricos (VP, RCL, BCA) y la "
+            "verificación secuencial de las reglas algebraicas ANTES de asignar "
+            "valores a los campos inferiores. Esto previene fallos lógicos."
+        )
+    )
+    decision_accion: Literal["Comprar", "Vender", "Mantener"] = Field(
+        ..., 
+        description="La acción recomendada basada exclusivamente en el análisis de los datos."
+    )
+    nombre_del_patron: str = Field(
+        ..., 
+        description=(
+            "Nombre técnico formal del patrón de velas o gráfico detectado "
+            "(ej. 'Martillo', 'Envolvente Alcista', 'Hombro Cabeza Hombro', etc.). Si no hay un patrón claro, indicar 'Ninguno'."
+        )
+    )
+    explicacion_tecnica: str = Field(
+        ..., 
+        description="Breve justificación de por qué se identifica ese patrón analizando los precios."
+    )
+    fiabilidad: Literal["Alta", "Media", "Baja"] = Field(
+        ..., 
+        description="Nivel de confianza o fuerza que tiene la señal detectada."
+    )
+    take_profit: float = Field(
+        ..., 
+        description="Precio objetivo sugerido para cerrar la operación con ganancias, calculado técnicamente según las resistencias o la proyección del patrón."
+    )
+    stop_loss: float = Field(
+        ..., 
+        description="Precio límite sugerido para cortar pérdidas, colocado estratégicamente (por ejemplo, abajo del mínimo de la estructura analizada)."
+    )
+    trailing_stop_activation: float = Field(
+        ...,
+        description="Precio objetivo intermedio en el cual el Trailing Stop debe activarse y empezar a mover el Stop Loss original para asegurar ganancias."
+    )
+    precio_entrada: float = Field(
+        ...,
+        description="El precio de mercado actual tomado como punto de partida para la operación (corresponde exactamente al último valor de 'Close')."
+    )
+    velas_espera_validacion: int = Field(
+        ...,
+        ge=1,  # Restringe que el valor sea mínimo 1 vela
+        le=10, # Opcional: restringe un máximo lógico (ej. 50 velas) para evitar respuestas absurdas
+        description=(
+            "Número entero de velas adicionales que el sistema debe esperar antes de ejecutar la próxima validación. Este tiempo se calcula en función de la "
+            "temporalidad actual y la distancia hacia el take_profit o stop_loss, estimando cuánto tardará el precio en confirmar si la decisión fue correcta."
+        )
+    )
+    puntos_control_patron: Optional[PuntosControlGemini] = Field(
+        None,
+        description=(
+            "Obligatorio para patrones complejos (Doble Techo/Suelo, Hombro-Cabeza-Hombro). "
+            "Debe mapear los precios exactos de las velas donde se forman los picos, "
+            "suelos y la línea de cuello (neckline) para validar la simetría rigurosa del patrón."
+        )
+    )
+
+
+
+def obtener_datos_filtro(velas):
+    datos = {
+        "velas": velas
+    }
+
+    return {
+        k: datos[k]
+        for k in INPUTS 
+        if k in datos
+    }

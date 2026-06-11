@@ -1,4 +1,3 @@
-from IA.esquemas import AnalisisPatronGemini
 from openai import OpenAI
 import configuracion.secrets as secrets
 

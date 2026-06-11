@@ -1,11 +1,11 @@
 import configuracion.secrets as secrets
-from IA.esquemas import AnalisisPatronGemini
+from IA.esquemas import AnalisisPatronGroq
 import anthropic
 import json
 
 cliente = anthropic.Anthropic(api_key=secrets.CLAUDE_IA)
 
-def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: dict, cache: bool) -> AnalisisPatronGemini:
+def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: dict, cache: bool) -> AnalisisPatronGroq:
     payload_dinamico_json = json.dumps(velas)
     
     if cache:

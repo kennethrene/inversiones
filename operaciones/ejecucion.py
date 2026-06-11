@@ -7,6 +7,7 @@ from ui.interfaz import ui_trailing
 from archivos.seguimiento import guardar_estadistica
 import IA.IA as IA
 from datetime import datetime, timedelta
+import IA.configuracion as configuracion
 
 def debe_ejecutar_operacion():
     if not parametros.USAR_IA:
@@ -55,12 +56,6 @@ def debe_ejecutar_operacion():
                             return accion
                 else:
                     parametros.log_operacion += f"❌  ADX fuerte pero Volumen muy bajo: {parametros.promedio_volumen_sin_actual} - Requerido: {parametros.VOL_ADECUADO_OPERAR}"
-
-            if parametros.CRITERIO6:
-                if parametros.promedio_volumen_sin_actual >= parametros.VOL_ADECUADO_OPERAR:
-                    accion = criterio6.ejecutar_criterio()
-                    if accion is not None:
-                        return accion
     else:
         now = datetime.now()
 
@@ -108,18 +103,25 @@ def debe_ejecutar_operacion():
                     parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
                     parametros.TRAILING_STOP = trailing_stop_ajustado
                     parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
-                    parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
+                    configuracion.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
                     return accion
                 else:
                     parametros.log_operacion = (
                         f"ℹ️  IA recomienda {accion}\n"
-                        f"      Patrón      : {patron}\n"
-                        f"      Explicación : {explicacion}\n"
-                        f"      Hora log    : {datetime.now().strftime('%H:%M')}"
+                        f"      Patrón              : {patron}\n"
+                        f"      Explicación         : {explicacion}\n"
+                        #f"      Próx. Instrucciones : {instrucciones}\n"
+                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                     )
             else:
                 parametros.error += "No se ejecutó la IA\n"
-                
+    
+    # Movimiento rápido - Vela verde o roja crece muy rápidamente
+    if parametros.CRITERIO6:
+        accion = criterio6.ejecutar_criterio()
+        if accion is not None:
+            return accion
+
     return ""
 
 def validar_trailing_stop():
@@ -142,13 +144,7 @@ def validar_trailing_stop():
             parametros.trailing_activado = True
 
         
-    if not parametros.USAR_IA:
-        if parametros.trailing_activado:
-            caida_desde_pico = parametros.maximo_rendimiento_alcanzado - parametros.rendimiento_actual
-            return ui_trailing(True, True, caida_desde_pico)
-        else:
-            return ui_trailing(True, False, None)
-    elif parametros.USAR_IA:
+    if parametros.USAR_IA:
         if parametros.trailing_activado:
             if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) > float(parametros.TRAILING_STOP):
                 nuevo_stop_loss = float(parametros.valor_compra) - float(parametros.DISTANCIA_TRAILING_MAXIMA)
@@ -162,7 +158,13 @@ def validar_trailing_stop():
                     parametros.STOP_LOSS = nuevo_stop_loss
             
         return ui_trailing(True, True, None)
-    
+    elif not parametros.USAR_IA:
+        if parametros.trailing_activado:
+            caida_desde_pico = parametros.maximo_rendimiento_alcanzado - parametros.rendimiento_actual
+            return ui_trailing(True, True, caida_desde_pico)
+        else:
+            return ui_trailing(True, False, None)   
+
     return ""
 
 def reevaluar_operacion():
@@ -204,7 +206,7 @@ def reevaluar_operacion():
                     parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
                     parametros.TRAILING_STOP = trailing_stop_ajustado
                     parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
-                    parametros.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
+                    configuracion.explicacion_decision = f"{explicacion}. Puntos de control: {puntos_control}"
                     guardar_estadistica("Ajuste")
                     return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
                 else:

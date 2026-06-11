@@ -43,7 +43,7 @@ TRAILING_STOP = 15.0                    # Mínimo de ganancia para activar la pe
 DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
 TAKE_PROFIT = 5.0                       # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
 TAKE_PROFIT_USD = 9                  # 🔥 Modifica este valor por la ganancia deseada en dólares
-STOP_LOSS  = -20.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
+STOP_LOSS  = -10.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
 STOP_LOSS_INICIAL_TRAILING = -20.0      # 🔴 Stop loss inicial antes de ser movido con el trailing stop (Modo IA)
 
 # PARÁMETROS DE INDICADORES DE DOBLE TECHO / SUELO Y HOMBRE CABEZA HOMBRO
@@ -58,121 +58,15 @@ SEGUNDOS_ENFRIAMIENTO = float(TEMPORALIDAD_MINUTOS * 60) / 2  # 🔥 Tiempo mín
 TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 
 # ============================================================================
-# CONFIGURACION DE ESTRATEGIAS HABILITADAS IA
-# ============================================================================
-USAR_IA = True
-HORAS_CACHE = 2
-MODELO_IA = {
-    "Gemini": {
-        "activo": True,
-        "cache": False,
-        "modelos": [
-            {
-                "activo": True,
-                "modelo": "gemini-3.1-flash-lite"
-            },
-            {
-                "activo": False,
-                "modelo": "gemini-3.5-flash"
-            },
-            {
-                "activo": False,
-                "modelo": "gemini-2.5-flash"
-            }
-        ]
-    },
-    "Groq": {
-        "activo": False,
-        "cache": False,
-        "modelos": [
-            {
-                "activo": False,
-                "modelo": "llama-3.1-8b-instant"
-            },
-            {
-                "activo": False,
-                "modelo": "llama-3.3-70b-versatile"
-            },
-            {
-                "activo": True,
-                "modelo": "meta-llama/llama-4-scout-17b-16e-instruct"
-            }
-        ]
-    },
-    "DeepSeek": {
-        "activo": False,
-        "cache": False,
-        "modelos": [
-            {
-                "activo": True,
-                "modelo": "deepseek-chat"
-            }
-        ]
-    },
-    "Claude": {
-        "activo": False,
-        "cache": False,
-        "modelos": [
-            {
-                "activo": False,
-                "modelo": "claude-3-5-sonnet-20241022"
-            },
-            {
-                "activo": False,
-                "modelo": "claude-3-haiku-20240307"
-            },
-            {
-                "activo": True,
-                "modelo": "claude-sonnet-4-6"
-            }
-        ]
-    }
-}
-TIPO_PROMPT = {
-    "Patrones": {
-        "version_inicial": "1_1",
-        "version_auditoria": "1_1",
-        "activo": True,
-        "inicial": "PROMPT_PATRONES",
-        "inicial_inputs": ["datos"],
-        "auditoria": "PROMPT_PATRONES_REEVALUACION",
-        "auditoria_inputs": [
-            "operacion", "precio_apertura", "take_profit", "stop_loss", 
-            "trailing_stop", "beneficio_neto", "patron", "explicacion", "datos"
-        ]
-    },
-    "Indicadores": {
-        "version_inicial": "1_0",
-        "version_auditoria": "1_0",
-        "activo": False,
-        "inicial": "to do",
-        "auditoria": "to do"
-    },
-    "PatronesIndicadores": {
-        "version_inicial": "1_0",
-        "version_auditoria": "1_0",
-        "activo": False,
-        "inicial": "PROMPT_PATRONES_INDICADORES",
-        "inicial_inputs": ["datos"],
-        "auditoria": "PROMPT_PATRONES_INDICADORES_REEVALUACION",
-        "auditoria_inputs": [
-            "operacion", "precio_apertura", "take_profit", "stop_loss", 
-            "trailing_stop", "beneficio_neto", "patron", "explicacion", "datos"
-        ]
-    }
-}
-
-explicacion_decision = ""
-
-# ============================================================================
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS MANUALES
 # ============================================================================
+USAR_IA = True
 CRITERIO1 = False
 CRITERIO2 = False
 CRITERIO3 = False
 CRITERIO4 = False
 CRITERIO5 = False
-CRITERIO6 = True # Extremo
+CRITERIO6 = False # Extremo
 CRITERIO7 = True # IA
 
 CRITERIO_INDICADORES = [

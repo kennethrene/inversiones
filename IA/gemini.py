@@ -2,11 +2,11 @@
 import datetime
 import json
 import traceback
-from IA.esquemas import AnalisisPatronGemini
 from google import genai
 from google.genai import types
 import configuracion.secrets as secrets
 import configuracion.parametros as parametros
+import IA.configuracion as configuracion
 
 cliente = genai.Client(api_key=secrets.GOOGLE_IA)
 cache_prompt_inicial = ""
@@ -19,7 +19,7 @@ max_reintentos = 3
 def crear_cache_de_reglas_inicial(modelo: str, prompt_sistema_reglas: str):
     global cache_prompt_inicial, fecha_expiracion_cache_inicial
 
-    ttl_formato_google = f"{parametros.HORAS_CACHE * 3600}s"
+    ttl_formato_google = f"{configuracion.HORAS_CACHE * 3600}s"
     try:
         cache_prompt_inicial = cliente.caches.create(
             model = modelo,
@@ -29,7 +29,7 @@ def crear_cache_de_reglas_inicial(modelo: str, prompt_sistema_reglas: str):
             )
         )
 
-        fecha_expiracion_cache_inicial = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=parametros.HORAS_CACHE)
+        fecha_expiracion_cache_inicial = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=configuracion.HORAS_CACHE)
         return True
     except Exception as e:
         parametros.error += traceback.format_exc()
@@ -38,7 +38,7 @@ def crear_cache_de_reglas_inicial(modelo: str, prompt_sistema_reglas: str):
     
     return False
 
-def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: str):
+def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: str, esquema):
     global cache_prompt_inicial, fecha_expiracion_cache_inicial
     cache_creado = False
 
@@ -56,12 +56,12 @@ def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: str):
                 config=types.GenerateContentConfig(
                     cached_content=cache_prompt_inicial.name, 
                     response_mime_type="application/json",
-                    response_schema=AnalisisPatronGemini,
+                    response_schema=esquema,
                     temperature=0.0
                 ),
             )
             
-            return AnalisisPatronGemini.model_validate_json(response.text)
+            return esquema.model_validate_json(response.text)
         except Exception as e:
             parametros.error += traceback.format_exc()
             # Forzar la lectura de todas las velas en la próxima lectura
@@ -74,7 +74,7 @@ def ejecutar_prompt_inicial(modelo: str, prompt: str, velas: str):
 def crear_cache_de_reglas_reevaluacion(modelo: str, prompt_sistema_reglas: str):
     global cache_prompt_reevaluacion, fecha_expiracion_cache_reevaluacion
 
-    ttl_formato_google = f"{parametros.HORAS_CACHE * 3600}s"
+    ttl_formato_google = f"{configuracion.HORAS_CACHE * 3600}s"
 
     try:
         cache_prompt_reevaluacion = cliente.caches.create(
@@ -85,7 +85,7 @@ def crear_cache_de_reglas_reevaluacion(modelo: str, prompt_sistema_reglas: str):
             )
         )
 
-        fecha_expiracion_cache_reevaluacion = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=parametros.HORAS_CACHE)
+        fecha_expiracion_cache_reevaluacion = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=configuracion.HORAS_CACHE)
         return True
     except Exception as e:
         parametros.error += traceback.format_exc()
@@ -94,7 +94,7 @@ def crear_cache_de_reglas_reevaluacion(modelo: str, prompt_sistema_reglas: str):
     
     return False
 
-def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: str):
+def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: str, esquema):
     global cache_prompt_reevaluacion, fecha_expiracion_cache_reevaluacion
     cache_creado = False
 
@@ -115,12 +115,12 @@ def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: st
                 config=types.GenerateContentConfig(
                     cached_content=cache_prompt_reevaluacion.name, 
                     response_mime_type="application/json",
-                    response_schema=AnalisisPatronGemini,
+                    response_schema=esquema,
                     temperature=0.0
                 ),
             )
             
-            return AnalisisPatronGemini.model_validate_json(response.text)
+            return esquema.model_validate_json(response.text)
         except Exception as e:
             parametros.error += traceback.format_exc()
             # Forzar la lectura de todas las velas en la próxima lectura
@@ -130,7 +130,7 @@ def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: st
     else:
         return None
 
-def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas):
+def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas, esquema):
     global reintentos, max_reintentos
     reintentos = 0
     error = ""
@@ -143,13 +143,13 @@ def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas):
                         contents=prompt,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
-                            response_schema=AnalisisPatronGemini,
+                            response_schema=esquema,
                             temperature=0.1
                         ),
                     )
                 json_crudo_texto = response.text
 
-                return AnalisisPatronGemini.model_validate_json(json_crudo_texto)
+                return esquema.model_validate_json(json_crudo_texto)
             except Exception as e:
                 error = str(e)
                 parametros.lista_velas_acumuladas = []
@@ -166,6 +166,6 @@ def ejecutar_prompt(modelo, prompt, cache, inicial, datos, velas):
         return None
     else:
         if inicial:
-            return ejecutar_prompt_inicial(modelo, prompt, velas)
+            return ejecutar_prompt_inicial(modelo, prompt, velas, esquema)
         else:
-            return ejecutar_prompt_reevaluacion(modelo, prompt, datos, velas)
+            return ejecutar_prompt_reevaluacion(modelo, prompt, datos, velas, esquema)

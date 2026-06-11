@@ -58,31 +58,41 @@ def ejecutar_cierre(driver, motivo_cierre):
         parametros.error += traceback.format_exc() + "\n"
 
 def cierre_stop_loss(rendimiento_actual):
-    if not parametros.USAR_IA:
+    if not parametros.USAR_IA or parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
         if rendimiento_actual <= parametros.STOP_LOSS:
             motivo_cierre = f"Stop Loss: {rendimiento_actual:+.2f}%"
             operacion_ganada = False
 
             return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
-        motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {float(parametros.STOP_LOSS):.2f}"
-        operacion_ganada = False
+    elif parametros.USAR_IA:
+        beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
+        
+        if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
+            motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {float(parametros.STOP_LOSS):.2f}"
+            operacion_ganada = False
 
-        return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
-        motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {float(parametros.STOP_LOSS):.2f}"
-        operacion_ganada = False
+            # Cuando es IA el trailing stop ha movido el stop loss, por lo que si el beneficio neto es > 0 entonces se aseguró ganancia
+            if beneficio_neto > 0:
+                motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
 
-        return True, operacion_ganada, motivo_cierre
+            return True, operacion_ganada, motivo_cierre
+        elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
+            motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {float(parametros.STOP_LOSS):.2f}"
+            operacion_ganada = False
+
+            if beneficio_neto > 0:
+                motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
+
+            return True, operacion_ganada, motivo_cierre
 
     return False, False, "Ejecutándose"
 
 def cierre_trailing_stop(maximo_rendimiento_alcanzado, rendimiento_actual):       
-    if not parametros.USAR_IA:
+    if not parametros.USAR_IA or parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
         caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
     
         if float(caida_desde_pico) >= float(parametros.DISTANCIA_TRAILING_MAXIMA):
-            motivo_cierre = f"Win Trailing. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
+            motivo_cierre = f"Trailing Stop. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
             operacion_ganada = True
 
             return True, operacion_ganada, motivo_cierre
@@ -95,17 +105,25 @@ def cierre_take_profit(beneficio_neto):
         motivo_cierre = f"Take Profit USD: ${beneficio_neto:.2f}"
 
         return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
-        motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {float(parametros.TAKE_PROFIT):.2f}"
-        operacion_ganada = True
-
-        return True, operacion_ganada, motivo_cierre
-    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
-        motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {float(parametros.TAKE_PROFIT):.2f}"
-        operacion_ganada = True
-
-        return True, operacion_ganada, motivo_cierre
     
+    if parametros.USAR_IA:
+        if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
+            motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {float(parametros.TAKE_PROFIT):.2f}"
+            operacion_ganada = True
+
+            return True, operacion_ganada, motivo_cierre
+        elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
+            motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {float(parametros.TAKE_PROFIT):.2f}"
+            operacion_ganada = True
+
+            return True, operacion_ganada, motivo_cierre
+
+    elif parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
+        if parametros.rendimiento_actual >= parametros.TAKE_PROFIT:
+            motivo_cierre = f"Take Profit: {parametros.rendimiento_actual}% >= {parametros.TAKE_PROFIT}%"
+            operacion_ganada = True
+            
+            return True, operacion_ganada, motivo_cierre
 
     return False, False, "Ejecutándose"
 

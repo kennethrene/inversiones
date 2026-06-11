@@ -1,5 +1,6 @@
 from extraccion.velas import extraer_velas_para_IA
 import configuracion.parametros as parametros
+import IA.configuracion as configuracion
 import configuracion.prompts as prompts
 from typing import Dict, Any, Optional
 from tvDatafeed import Interval
@@ -18,36 +19,34 @@ def ejecutar_operacion():
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
 
     if velas is not None and len(velas) > 0:
-        datos_en_texto = formatear_velas_para_ia(velas)
+        velas = formatear_velas_para_ia(velas)
 
-        banco_de_datos_bot = {
-            "datos": datos_en_texto
-        }
-        
-        proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
-        
-        mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
-        inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["inicial_inputs"] if k in banco_de_datos_bot}
-        prompt_inicial = importlib.import_module(f"IA.prompts.inicial.{mapa_prompts['version_inicial']}")
+        nombre_ia, modelo, cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
+        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
+
+        prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{configuracion_prompt['version_apertura']}")
+        obtener_datos_filtro = getattr(prompt_apertura,"obtener_datos_filtro")
+        inputs_filtrados = obtener_datos_filtro(velas)
+        esquema = getattr(prompt_apertura, "Esquema")
         
         if not cache:
-            prompt_plantilla = getattr(prompt_inicial, mapa_prompts["inicial"])
+            prompt_plantilla = getattr(prompt_apertura, configuracion_prompt["apertura"])
         else:
-            prompt_plantilla = getattr(prompts, mapa_prompts["inicial"] + "_CACHE")
+            prompt_plantilla = getattr(prompts, configuracion_prompt["apertura"] + "_CACHE")
 
         prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        if proveedor_activo == "Gemini":
-            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, True, None, datos_en_texto)
+        if nombre_ia == "Gemini":
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, True, None, velas, esquema)
 
-        elif proveedor_activo == "Groq":
+        elif nombre_ia == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
         
-        elif proveedor_activo == "DeepSeek":
+        elif nombre_ia == "DeepSeek":
             objeto_validado = deepseek.ejecutar_prompt(modelo, prompt)
         
-        elif proveedor_activo == "Claude":
-            objeto_validado = claude.ejecutar_prompt_inicial(modelo, prompt_plantilla, datos_en_texto, cache)
+        elif nombre_ia == "Claude":
+            objeto_validado = claude.ejecutar_prompt_inicial(modelo, prompt_plantilla, velas, cache)
 
         if objeto_validado is not None:
             accion          = objeto_validado.decision_accion
@@ -79,43 +78,27 @@ def reevaluar_operacion():
     velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
 
     if velas is not None and len(velas) > 0:
-        datos_en_texto = formatear_velas_para_ia(velas)
+        velas = formatear_velas_para_ia(velas)
 
-        proveedor_activo, modelo, cache = obtener_modelo_ia_activo(parametros.MODELO_IA)
+        nombre_ia, modelo, cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
+        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
 
-        # Ajustar valores para TradingView (cuyos valores son mas bajos que XTB)
-        precio_apertura_ajustado = float(parametros.datos_mapeados['Precio Apertura'].replace(" ", "")) - float(parametros.diferencia_precio)
-        take_profit_ajustado = float(parametros.TAKE_PROFIT) - float(parametros.diferencia_precio)
-        stop_loss_ajustado = float(parametros.STOP_LOSS)  - float(parametros.diferencia_precio)
-        trailing_stop_ajustado = float(parametros.TRAILING_STOP) - float(parametros.diferencia_precio)
-
-        mapa_prompts = obtener_prompts_estrategia_activa(parametros.TIPO_PROMPT)
-        banco_de_datos_bot = {
-            "datos": datos_en_texto,
-            "precio_apertura": precio_apertura_ajustado,
-            "take_profit": take_profit_ajustado,
-            "stop_loss": stop_loss_ajustado,
-            "trailing_stop": trailing_stop_ajustado,
-            "explicacion": parametros.explicacion_decision,
-            "beneficio_neto": parametros.datos_mapeados["Beneficio Neto"],
-            "patron": parametros.datos_mapeados["Patron"],
-            "operacion": parametros.datos_mapeados['Operacion']
-        }
-
-        inputs_filtrados = {k: banco_de_datos_bot[k] for k in mapa_prompts["auditoria_inputs"] if k in banco_de_datos_bot}
-        prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{mapa_prompts['version_auditoria']}")
+        prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{nombre_ia}.{configuracion_prompt['version_reevaluacion']}")
+        obtener_datos_filtro = getattr(prompt_reevaluacion,"obtener_datos_filtro")
+        datos, inputs_filtrados = obtener_datos_filtro(velas)
+        esquema = getattr(prompt_reevaluacion, "Esquema")
 
         if not cache:
-            prompt_plantilla = getattr(prompt_reevaluacion, mapa_prompts["auditoria"])
+            prompt_plantilla = getattr(prompt_reevaluacion, configuracion_prompt["reevaluacion"])
         else:
-            prompt_plantilla = getattr(prompts, mapa_prompts["auditoria"] + "_CACHE")
+            prompt_plantilla = getattr(prompts, configuracion_prompt["reevaluacion"] + "_CACHE")
 
         prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        if proveedor_activo == "Gemini":
-            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, False, banco_de_datos_bot, datos_en_texto)
+        if nombre_ia == "Gemini":
+            objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, False, datos, velas, esquema)
 
-        elif proveedor_activo == "Groq":
+        elif nombre_ia == "Groq":
             objeto_validado = groq.ejecutar_prompt(modelo, prompt)
 
         if objeto_validado is not None:
@@ -184,13 +167,12 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
     
     # 5. Devolvemos directamente el mapeo de sus prompts asociados
     return {
-        "version_inicial": datos_estrategia["version_inicial"],
-        "version_auditoria": datos_estrategia["version_auditoria"],
+        "version_apertura": datos_estrategia["version_apertura"],
+        "version_reevaluacion": datos_estrategia["version_reevaluacion"],
+        "version_esquema": datos_estrategia["version_esquema"],
         "estrategia": nombre_estrategia,
-        "inicial": datos_estrategia["inicial"],
-        "inicial_inputs": datos_estrategia["inicial_inputs"],
-        "auditoria": datos_estrategia["auditoria"],
-        "auditoria_inputs": datos_estrategia["auditoria_inputs"]
+        "apertura": datos_estrategia["apertura"],
+        "reevaluacion": datos_estrategia["reevaluacion"],
     }
 
 def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bool]]:
