@@ -16,8 +16,8 @@ parametros.datos_mapeados['Beneficio Neto'] = -6.97
 
 configuracion.proximas_instrucciones = "SI el Close de la Vela 0 rompe el Mínimo Absoluto (28619.29) con una mecha inferior <= 0.1x cuerpo y tamaño de cuerpo >= 1.2x VP (152.82), ENTONCES ejecutar Venta. SI el precio rebota y forma un Martillo en el Mínimo Absoluto, ENTONCES ejecutar Compra."
 
-#resultado = IA.ejecutar_operacion()
-resultado = IA.reevaluar_operacion()
+resultado = IA.ejecutar_operacion()
+#resultado = IA.reevaluar_operacion()
 if resultado is None:
     print("No se ejecutó la IA")
 else:

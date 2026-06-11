@@ -1,12 +1,10 @@
-
-from IA.esquemas import AnalisisPatronGroq
 from groq import Groq
 import json
 import configuracion.secrets as secrets
 
 cliente = Groq(api_key=secrets.GROQ_IA)
 
-def ejecutar_prompt(modelo, prompt):
+def ejecutar_prompt(modelo, prompt, esquema, inicial):
     formato_resp = {
         "type": "json_object"
     }
@@ -14,7 +12,7 @@ def ejecutar_prompt(modelo, prompt):
     prompt_ajustado = (
         f"{prompt}\n\n"
         f"DEBES RESPONDER ESTRICTAMENTE CON UN OBJETO JSON que cumpla con este formato:\n"
-        f"{AnalisisPatronGroq.model_json_schema()}"
+        f"{esquema.model_json_schema()}"
     )
 
     mensajes = [
@@ -51,16 +49,7 @@ def ejecutar_prompt(modelo, prompt):
         "zona_resistencia": puntos_ia.get("zona_resistencia") or 0.0
     }
 
-    reevaluacion_ia = datos_mezclados.get("reevaluacion") or "Mantener"
-
-    texto_extraido_error = ""
-    if reevaluacion_ia not in ["Mantener", "Cerrar", "Ajustar"]:
-        texto_extraido_error = str(reevaluacion_ia) # Guardamos el texto largo para rescatarlo luego
-        reevaluacion_ia = "Mantener" # Forzamos el valor Literal válido exigido por Pydantic
-
     dict_reparado = {
-        "decision_accion": datos_mezclados.get("accion_sugerida") or datos_mezclados.get("decision_accion") or "Mantener",
-        "reevaluacion": datos_mezclados.get("reevaluacion") or "Mantener",
         "nombre_del_patron": datos_mezclados.get("patron_detectado") or datos_mezclados.get("nombre_del_patron") or "Ninguno",
         "fiabilidad": datos_mezclados.get("fiabilidad_patron") or datos_mezclados.get("fiabilidad") or "Baja",
         "precio_entrada": float(datos_mezclados.get("precio_entrada") or 0.0),
@@ -69,19 +58,31 @@ def ejecutar_prompt(modelo, prompt):
         "trailing_stop_activation": float(datos_mezclados.get("trailing_stop_activation") or datos_mezclados.get("trailing_stop") or 0.0),
         "puntos_control_patron": puntos_reparados
     }
-    
+
     try:
         dict_reparado["velas_espera_validacion"] = int(datos_mezclados.get("velas_espera_validacion") or datos_mezclados.get("velas_espera") or 1)
     except:
         dict_reparado["velas_espera_validacion"] = 1
-        
+
+    texto_extraido_error = ""
     texto_explicativo = (
         datos_mezclados.get("justificacion_riesgo") or 
         datos_mezclados.get("explicacion_tecnica") or 
         texto_extraido_error or # Si se guardó el error de la IA, lo usamos como texto explicativo
         "Estructura validada automáticamente por el sistema de exclusión lateral."
     )
-    dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
-    dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
 
-    return AnalisisPatronGroq.model_validate(dict_reparado)
+    if inicial:
+        dict_reparado["decision_accion"] = datos_mezclados.get("accion_sugerida") or datos_mezclados.get("decision_accion") or "Mantener"
+        dict_reparado["explicacion_tecnica"] = datos_mezclados.get("explicacion_tecnica") or texto_explicativo
+    else:
+        reevaluacion_ia = datos_mezclados.get("reevaluacion") or "Mantener"
+
+        if reevaluacion_ia not in ["Mantener", "Cerrar", "Ajustar"]:
+            texto_extraido_error = str(reevaluacion_ia) # Guardamos el texto largo para rescatarlo luego
+            reevaluacion_ia = "Mantener" # Forzamos el valor Literal válido exigido por Pydantic
+
+        dict_reparado["reevaluacion"] = reevaluacion_ia
+        dict_reparado["explicacion_reevaluacion"] = datos_mezclados.get("explicacion_reevaluacion") or texto_explicativo
+
+    return esquema.model_validate(dict_reparado)

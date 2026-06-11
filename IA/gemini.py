@@ -105,7 +105,7 @@ def ejecutar_prompt_reevaluacion(modelo: str, prompt: str, datos: str, velas: st
 
     if cache_creado:
         payload_completo = datos.copy()
-        payload_completo["datos"] = velas
+        payload_completo["velas"] = velas
         datos_json = json.dumps(payload_completo)
 
         try:

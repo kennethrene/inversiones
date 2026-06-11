@@ -1,14 +1,11 @@
 from extraccion.velas import extraer_velas_para_IA
 import configuracion.parametros as parametros
 import IA.configuracion as configuracion
-import configuracion.prompts as prompts
 from typing import Dict, Any, Optional
 from tvDatafeed import Interval
 import importlib
 import IA.gemini as gemini
 import IA.groq as groq
-import IA.deepseek as deepseek
-import IA.claude as claude
 
 def ejecutar_operacion():
     num_velas = 1
@@ -21,32 +18,26 @@ def ejecutar_operacion():
     if velas is not None and len(velas) > 0:
         velas = formatear_velas_para_ia(velas)
 
-        nombre_ia, modelo, cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
+        nombre_ia, modelo, cache, version, _, version_cache, _ = obtener_modelo_ia_activo(configuracion.MODELO_IA)
         configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
 
-        prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{configuracion_prompt['version_apertura']}")
-        obtener_datos_filtro = getattr(prompt_apertura,"obtener_datos_filtro")
-        inputs_filtrados = obtener_datos_filtro(velas)
+        if cache:
+            prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{version_cache}_CACHE")
+            prompt = getattr(prompt_apertura, configuracion_prompt["apertura"])
+        else:
+            prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{version}")
+            obtener_datos_filtro = getattr(prompt_apertura,"obtener_datos_filtro")
+            inputs_filtrados = obtener_datos_filtro(velas)
+            prompt_plantilla = getattr(prompt_apertura, configuracion_prompt["apertura"])
+            prompt = prompt_plantilla.format(**inputs_filtrados)
+            
         esquema = getattr(prompt_apertura, "Esquema")
         
-        if not cache:
-            prompt_plantilla = getattr(prompt_apertura, configuracion_prompt["apertura"])
-        else:
-            prompt_plantilla = getattr(prompts, configuracion_prompt["apertura"] + "_CACHE")
-
-        prompt = prompt_plantilla.format(**inputs_filtrados)
-
         if nombre_ia == "Gemini":
             objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, True, None, velas, esquema)
 
         elif nombre_ia == "Groq":
-            objeto_validado = groq.ejecutar_prompt(modelo, prompt)
-        
-        elif nombre_ia == "DeepSeek":
-            objeto_validado = deepseek.ejecutar_prompt(modelo, prompt)
-        
-        elif nombre_ia == "Claude":
-            objeto_validado = claude.ejecutar_prompt_inicial(modelo, prompt_plantilla, velas, cache)
+            objeto_validado = groq.ejecutar_prompt(modelo, prompt, esquema, True)
 
         if objeto_validado is not None:
             accion          = objeto_validado.decision_accion
@@ -80,26 +71,27 @@ def reevaluar_operacion():
     if velas is not None and len(velas) > 0:
         velas = formatear_velas_para_ia(velas)
 
-        nombre_ia, modelo, cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
-        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
+        nombre_ia, modelo, cache, _, version, _, version_cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
+        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)        
 
-        prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{nombre_ia}.{configuracion_prompt['version_reevaluacion']}")
-        obtener_datos_filtro = getattr(prompt_reevaluacion,"obtener_datos_filtro")
-        datos, inputs_filtrados = obtener_datos_filtro(velas)
-        esquema = getattr(prompt_reevaluacion, "Esquema")
-
-        if not cache:
-            prompt_plantilla = getattr(prompt_reevaluacion, configuracion_prompt["reevaluacion"])
+        if cache:
+            prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{nombre_ia}.{version_cache}_CACHE")
+            obtener_datos_filtro = getattr(prompt_reevaluacion,"obtener_datos_filtro")
+            datos = obtener_datos_filtro(velas)
+            prompt = getattr(prompt_reevaluacion, configuracion_prompt["reevaluacion"])
         else:
-            prompt_plantilla = getattr(prompts, configuracion_prompt["reevaluacion"] + "_CACHE")
+            prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{nombre_ia}.{version}")
+            obtener_datos_filtro = getattr(prompt_reevaluacion,"obtener_datos_filtro")
+            datos, inputs_filtrados = obtener_datos_filtro(velas)
+            prompt_plantilla = getattr(prompt_reevaluacion, configuracion_prompt["reevaluacion"])
+            prompt = prompt_plantilla.format(**inputs_filtrados)
 
-        prompt = prompt_plantilla.format(**inputs_filtrados)
-
+        esquema = getattr(prompt_reevaluacion, "Esquema")
         if nombre_ia == "Gemini":
             objeto_validado = gemini.ejecutar_prompt(modelo, prompt, cache, False, datos, velas, esquema)
 
         elif nombre_ia == "Groq":
-            objeto_validado = groq.ejecutar_prompt(modelo, prompt)
+            objeto_validado = groq.ejecutar_prompt(modelo, prompt, esquema, False)
 
         if objeto_validado is not None:
             reevaluacion       = objeto_validado.reevaluacion 
@@ -167,9 +159,6 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
     
     # 5. Devolvemos directamente el mapeo de sus prompts asociados
     return {
-        "version_apertura": datos_estrategia["version_apertura"],
-        "version_reevaluacion": datos_estrategia["version_reevaluacion"],
-        "version_esquema": datos_estrategia["version_esquema"],
         "estrategia": nombre_estrategia,
         "apertura": datos_estrategia["apertura"],
         "reevaluacion": datos_estrategia["reevaluacion"],
@@ -182,5 +171,11 @@ def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bo
             # 2. Buscar el modelo que tenga "activo": True dentro de esa IA
             for item_modelo in datos_ia.get("modelos", []):
                 if item_modelo.get("activo"):
-                    return nombre_ia, item_modelo["modelo"], datos_ia.get("cache", False)
+                    return  nombre_ia, \
+                            item_modelo["modelo"], \
+                            datos_ia.get("cache", False), \
+                            datos_ia.get("version_apertura"), \
+                            datos_ia.get("version_reevaluacion"), \
+                            datos_ia.get("version_apertura_cache"), \
+                            datos_ia.get("version_reevaluacion_cache")
     return None

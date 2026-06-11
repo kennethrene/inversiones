@@ -1,5 +1,5 @@
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 PROMPT_PATRONES = """
 Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro. Tu única función es procesar al cierre de cada vela un arreglo cronológico de precios, validar la existencia de patrones chartistas o de velas bajo reglas algebraicas estrictas, aplicar filtros severos de exclusión por tendencia lateral y devolver una decisión operativa de apertura en formato JSON.
@@ -113,33 +113,24 @@ INPUTS = [
     "velas"
 ]
 
-class PuntosControlGemini(BaseModel):
-    primer_pico: Optional[float] = Field(None, description="Precio del primer pico o suelo.")
-    segundo_pico: Optional[float] = Field(None, description="Precio del segundo pico o suelo.")
-    linea_cuello: Optional[float] = Field(None, description="Precio de la línea de cuello (neckline).")
-    zona_soporte: Optional[float] = Field(None, description="Precio del soporte del rango lateral si aplica.")
-    zona_resistencia: Optional[float] = Field(None, description="Precio de la resistencia del rango lateral si aplica.")
+class PuntosControlGroq(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    primer_pico: float = Field(0.0, description="Precio del primer pico o suelo.")
+    segundo_pico: float = Field(0.0, description="Precio del segundo pico o suelo.")
+    linea_cuello: float = Field(0.0, description="Precio de la línea de cuello (neckline).")
+    zona_soporte: float = Field(0.0, description="Precio del soporte del rango lateral si aplica.")
+    zona_resistencia: float = Field(0.0, description="Precio de la resistencia del rango lateral si aplica.")
 
 class Esquema(BaseModel):
-    # CRÍTICO: Este campo va primero para forzar al LLM a calcular antes de decidir
-    proceso_pensamiento_interno_matematico: str = Field(
-        ..., 
-        description=(
-            "Escribe aquí paso a paso los cálculos numéricos (VP, RCL, BCA) y la "
-            "verificación secuencial de las reglas algebraicas ANTES de asignar "
-            "valores a los campos inferiores. Esto previene fallos lógicos."
-        )
-    )
+    model_config = ConfigDict(extra="forbid")
+    
     decision_accion: Literal["Comprar", "Vender", "Mantener"] = Field(
         ..., 
         description="La acción recomendada basada exclusivamente en el análisis de los datos."
     )
     nombre_del_patron: str = Field(
         ..., 
-        description=(
-            "Nombre técnico formal del patrón de velas o gráfico detectado "
-            "(ej. 'Martillo', 'Envolvente Alcista', 'Hombro Cabeza Hombro', etc.). Si no hay un patrón claro, indicar 'Ninguno'."
-        )
+        description="Nombre técnico formal del patrón de velas o gráfico detectado (ej. 'Martillo', 'Envolvente Alcista', 'Hombro Cabeza Hombro', etc.). Si no hay un patrón claro, indicar 'Ninguno'."
     )
     explicacion_tecnica: str = Field(
         ..., 
@@ -174,8 +165,8 @@ class Esquema(BaseModel):
             "temporalidad actual y la distancia hacia el take_profit o stop_loss, estimando cuánto tardará el precio en confirmar si la decisión fue correcta."
         )
     )
-    puntos_control_patron: Optional[PuntosControlGemini] = Field(
-        None,
+    puntos_control_patron: PuntosControlGroq = Field(
+        ...,
         description=(
             "Obligatorio para patrones complejos (Doble Techo/Suelo, Hombro-Cabeza-Hombro). "
             "Debe mapear los precios exactos de las velas donde se forman los picos, "
