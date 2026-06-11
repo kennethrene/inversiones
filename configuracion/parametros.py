@@ -131,7 +131,7 @@ MODELO_IA = {
 TIPO_PROMPT = {
     "Patrones": {
         "version_inicial": "1_1",
-        "version_auditoria": "1_0",
+        "version_auditoria": "1_1",
         "activo": True,
         "inicial": "PROMPT_PATRONES",
         "inicial_inputs": ["datos"],
