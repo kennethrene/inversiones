@@ -6,6 +6,7 @@ import threading
 import matplotlib.pyplot as plt
 import time
 import os
+import sys
 import configuracion.parametros as parametros
 from operaciones.ejecucion import ejecutar_operacion, validar_trailing_stop, reevaluar_operacion
 from ui.interfaz import ui_trailing, ui_stop_loss, ui_operacion_activa, ui_general
@@ -20,6 +21,12 @@ motivo_cierre = "N/D"
 driver = None
 comando_limpiar = None
 
+if len(sys.argv) > 1:
+    try:
+        parametros.PORT = int(sys.argv[1])
+    except:
+        print("Error: El puerto debe ser un número entero. Usando 9222 por defecto.")
+
 def inicializar():
     global minuto_anterior, motivo_cierre, driver, comando_limpiar
 
@@ -27,9 +34,9 @@ def inicializar():
     opciones.add_argument("--headless=new")
     opciones.add_argument("--window-size=1920,1080")
     opciones.add_argument("--disable-gpu")
-    opciones.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+    opciones.add_experimental_option("debuggerAddress", f"127.0.0.1:{parametros.PORT}")
 
-    print("Intentando enlazar con Chrome en el puerto 9222...")
+    print(f"Intentando enlazar con Chrome en el puerto {parametros.PORT}")
     driver = webdriver.Chrome(options=opciones)
 
     driver.set_page_load_timeout(3)
@@ -44,7 +51,7 @@ def inicializar():
 
     os.system(comando_limpiar)
     print("=" * 75)
-    print("¡Conectado con éxito a xStation!")
+    print(f"Conectado con éxito a Chrome en el puerto {parametros.PORT}")
     print("=" * 75)
     time.sleep(1)
 
@@ -89,7 +96,17 @@ def bot_scalping():
                 js_script_shadow = obtener_datos_operaciones()                
                 resultado_shadow = driver.execute_script(js_script_shadow)
                 operaciones_detalles = resultado_shadow["detalles"]
+                operaciones = operaciones_detalles
                 
+                # Identificar el activo actual del Chrome activo para descartar las demas operacioens
+                for operacion in operaciones_detalles:
+                    filtrados = [str(d).replace('\xa0', ' ').strip() for d in operacion if str(d).strip()]
+                    
+                    if len(filtrados) >= 2 and filtrados[0] == parametros.activo_actual:
+                        operaciones = operacion
+                        break
+
+                operaciones_detalles = operaciones
                 total_posiciones = resultado_shadow["total"]
                 operacion_activa = total_posiciones > 0
                 ejecutar_cierre_operacion = False

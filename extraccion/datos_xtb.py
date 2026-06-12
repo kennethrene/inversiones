@@ -51,6 +51,7 @@ def extraer_datos_operacion(lista_cruda):
 def obtener_datos_operaciones():
     return """
         let botonesValidos = [];
+        let botones = new Map();
         let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
         
         todosLosBotones.forEach(btn => {
@@ -61,9 +62,16 @@ def obtener_datos_operaciones():
             let elementosGlobales = document.querySelectorAll("*");
             elementosGlobales.forEach(el => {
                 if (el.shadowRoot) {
-                    let btnShadow = el.shadowRoot.querySelector("button[data-testid='close-button']");
-                    if (btnShadow && (btnShadow.offsetWidth > 0 || btnShadow.offsetHeight > 0)) {
-                        botonesValidos.push(btnShadow);
+                    let btnShadow = el.shadowRoot.querySelectorAll("button[data-testid='close-button']");
+                    if (btnShadow.length > 0) {
+                        btnShadow.forEach(btn => {
+                            if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0) &&
+                                btn.closest(".header-info").querySelector("[data-testid='instrument-name'] .pds-element-name-value__element-name") != null) {
+                                botonesValidos.push(btn);
+                                activo = btn.closest(".header-info").querySelector("[data-testid='instrument-name'] .pds-element-name-value__element-name").innerText.trim();
+                                botones.set(activo, btn);
+                            }
+                        });
                     }
                 }
             });
@@ -78,7 +86,7 @@ def obtener_datos_operaciones():
             }
         });
         
-        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; }
+        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; window.botonesCerrar = botonesValidos; window.botonesCerrar = botones;}
         return { "total": botonesValidos.length, "detalles": datosOperaciones };
         """
 

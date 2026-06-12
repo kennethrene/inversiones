@@ -16,7 +16,7 @@ def guardar_estadistica(evento):
     Guarda una fila de datos en un archivo CSV para seguimiento estadístico.
     """
     fecha = time.strftime('%Y-%m-%d')
-    archivo = "estadisticas_bot" + fecha + ".csv"
+    archivo = "estadisticas_bot_" + parametros.activo_actual + "_" + fecha + ".csv"
     
     # Definir los encabezados de las columnas
     encabezados = ["Hora", "Evento", "Activo", "Lote", "Precio Compra", "Precio Venta", "EMA 35", "EMA 50", "RSI", "MACD", "Beneficio %", "Beneficio Neto", "Resulado Operación", "Log" , "Motivo Cierre", "Patron Gráfico"]
@@ -70,7 +70,7 @@ def actualizar_ultima_operacion(datos, ganada, motivo):
     el resultado en dólares y el evento, y vuelve a guardar el archivo.
     """
     fecha = time.strftime('%Y-%m-%d')
-    archivo = "estadisticas_bot" + fecha + ".csv"
+    archivo = "estadisticas_bot_" + parametros.activo_actual + "_" + fecha + ".csv"
     
     if not os.path.exists(archivo):
         print("❌ ERROR: No existe el archivo de estadísticas para actualizar.")

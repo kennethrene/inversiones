@@ -2,7 +2,7 @@ import pandas as pd
 
 MOSTRAR_GRAFICO = False
 DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
-
+PORT = 9222
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
 # ============================================================================
@@ -16,15 +16,15 @@ PRELOAD_VALOR_COMPRA_ABRIO = 0
 PRELOAD_VALOR_VENTA_ABRIO = 0
 
 CARGAR_DATOS_OPERACION = False
-PRELOAD_ACTIVO_ACTUAL = "US100"
+PRELOAD_ACTIVO_ACTUAL = "US500"
 PRELOAD_OPERACION = 'Compra'
-PRELOAD_PRECIO_APERTURA = 30580.79
-PRELOAD_TAKE_PROFIT = 30620
-PRELOAD_STOP_LOSS = 30514
-PRELOAD_TRAILING_STOP = 30589
+PRELOAD_PRECIO_APERTURA = 7400
+PRELOAD_TAKE_PROFIT = 7434
+PRELOAD_STOP_LOSS = 7300
+PRELOAD_TRAILING_STOP = 7434
 PRELOAD_DIFERENCIA_PRECIO= 50
 PRELOAD_PATRON = 'Tendencia Alcista Continuada'
-PRELOAD_BENEFICIO_NETO = -6.56
+PRELOAD_BENEFICIO_NETO = -1.0
 # ===========================================================================
 # ⚙ CONFIGURACIÓN DE PARÁMETROS GLOBALES DE TRADING (MACD + RSI + ADX)
 # ===========================================================================
@@ -61,51 +61,11 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS MANUALES
 # ============================================================================
 USAR_IA = True
-CRITERIO1 = False
-CRITERIO2 = False
-CRITERIO3 = False
-CRITERIO4 = False
-CRITERIO5 = False
 CRITERIO6 = False # Extremo
 CRITERIO7 = True # IA
 
 CRITERIO_INDICADORES = [
     {},
-    {
-        # 1
-        "MACD": False,
-        "RSI": True,
-        "BOLLINGER": False,
-        "EMA": False
-    },
-    {
-        # 2
-        "MACD": False,
-        "RSI": True,
-        "BOLLINGER": False,
-        "EMA": False
-    },
-    {
-        # 3
-        "MACD": True,
-        "RSI": False,
-        "BOLLINGER": True,
-        "EMA": False
-    },
-    {
-        # 4
-        "MACD": False,
-        "RSI": True,
-        "BOLLINGER": False,
-        "EMA": True
-    },
-    {
-        # 5
-        "MACD": False,
-        "RSI": True,
-        "BOLLINGER": False,
-        "EMA": False
-    },
     {
         # 6
         "MACD": False,

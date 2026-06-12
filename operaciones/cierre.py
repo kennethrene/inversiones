@@ -29,31 +29,34 @@ def operacion_debe_cerrar():
 
 def ejecutar_cierre(driver, motivo_cierre):
     try:
-        beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
-
-        driver.execute_script("if(window.ultimoBotonCierre) { window.ultimoBotonCierre.click(); }")
-        #os.system(f'say "Posición cerrada por {motivo_cierre_stats}" &')
-        parametros.historico_cuenta.append(beneficio_neto)
-
-        # 🔥 REGISTRAR EL TIEMPO EXACTO DEL CIERRE
-        parametros.TIEMPO_ULTIMO_CIERRE = time.time()
-
-        # Sincronizador de estadísticas con lectura de resultados reales
-        if beneficio_neto > 0:
-            actualizar_ultima_operacion(parametros.datos_mapeados, "Ganada", motivo_cierre)
-            actualizar_estadisticas_cierre(True)
-        else:
-            actualizar_ultima_operacion(parametros.datos_mapeados, "Perdida", motivo_cierre)
-            actualizar_estadisticas_cierre(False)
+        if not parametros.DEBUG:
+            beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
         
-        parametros.maximo_rendimiento_alcanzado = 0.0
-        parametros.TRAILING_STOP = 15.0
-        parametros.DISTANCIA_TRAILING_MAXIMA = 4.0
-        parametros.TAKE_PROFIT = 3.5
-        parametros.STOP_LOSS  = -7.5
-        parametros.trailing_activado = False
+            driver.execute_script(
+                f"if (window.botonesCerrar && window.botonesCerrar.get('{parametros.activo_actual}')) {{ "
+                f"    window.botonesCerrar.get('{parametros.activo_actual}').click(); "
+                f"}}"
+            )
 
-        time.sleep(2)
+            parametros.historico_cuenta.append(beneficio_neto)
+            parametros.TIEMPO_ULTIMO_CIERRE = time.time()
+
+            # Sincronizador de estadísticas con lectura de resultados reales
+            if beneficio_neto > 0:
+                actualizar_ultima_operacion(parametros.datos_mapeados, "Ganada", motivo_cierre)
+                actualizar_estadisticas_cierre(True)
+            else:
+                actualizar_ultima_operacion(parametros.datos_mapeados, "Perdida", motivo_cierre)
+                actualizar_estadisticas_cierre(False)
+            
+            parametros.maximo_rendimiento_alcanzado = 0.0
+            parametros.TRAILING_STOP = 15.0
+            parametros.DISTANCIA_TRAILING_MAXIMA = 4.0
+            parametros.TAKE_PROFIT = 3.5
+            parametros.STOP_LOSS  = -7.5
+            parametros.trailing_activado = False
+
+            time.sleep(2)
     except Exception as error_ejecucion:
         parametros.error += traceback.format_exc() + "\n"
 
