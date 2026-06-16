@@ -1,5 +1,6 @@
 from tvDatafeed import TvDatafeed
 import configuracion.parametros as parametros
+from datetime import datetime
 
 symbols = {
     "US100": "NAS100",
@@ -42,7 +43,8 @@ def extraer_velas(intervalo):
 
         return data[:-1]
     else:
-        parametros.error = "Error: No se recibieron datos de TradingView\n"
+        hora = datetime.now()
+        parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')})\n"
 
 def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
     global reintentos, max_reintentos
@@ -66,7 +68,8 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
             pass
 
         reintentos += 1
-        parametros.error = f"Error: No se recibieron datos de TradingView (Reintento {reintentos})\n"
+        hora = datetime.now()
+        parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')}) (Reintento {reintentos})\n"
 
     # 3. Procesar, renombrar columnas y convertir al formato solicitado
     if df is not None and not df.empty:
@@ -89,7 +92,8 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas):
             parametros.lista_velas_acumuladas = data
             return parametros.lista_velas_acumuladas
     else:
-        parametros.error = "Error: No se recibieron datos de TradingView\n"
+        hora = datetime.now()
+        parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')})\n"
     
     # Forzar la lectura de todas las velas en la próxima lectura
     parametros.lista_velas_acumuladas = []

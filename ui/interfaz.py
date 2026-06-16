@@ -223,7 +223,7 @@ def ui_stop_loss(activo):
         )
 
 def ui_operacion_activa(activo):
-    if activo:
+    if activo and parametros.activo_actual == parametros.datos_mapeados['Activo']:
         icono_beneficio = "🟢" if parametros.rendimiento_actual >= 0 else "🔴"
 
         return (
@@ -243,7 +243,7 @@ def ui_operacion_activa(activo):
     else:
         return (
             f"{texto_separador}\n"
-            f"📌 SIN OPERACIONES ACTIVAS\n"
+            f"📌 SIN OPERACIONES ACTIVAS PARA {parametros.activo_actual}\n"
             f"  ───────────────────────────────────\n"
             f"   {parametros.log_operacion}"
         )

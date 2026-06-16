@@ -16,12 +16,12 @@ PRELOAD_VALOR_COMPRA_ABRIO = 0
 PRELOAD_VALOR_VENTA_ABRIO = 0
 
 CARGAR_DATOS_OPERACION = False
-PRELOAD_ACTIVO_ACTUAL = "US500"
-PRELOAD_OPERACION = 'Compra'
-PRELOAD_PRECIO_APERTURA = 7400
-PRELOAD_TAKE_PROFIT = 7434
-PRELOAD_STOP_LOSS = 7300
-PRELOAD_TRAILING_STOP = 7434
+PRELOAD_ACTIVO_ACTUAL = "GOLD"
+PRELOAD_OPERACION = 'Venta'
+PRELOAD_PRECIO_APERTURA = 4322.88
+PRELOAD_TAKE_PROFIT = 4313.72
+PRELOAD_STOP_LOSS = 4330
+PRELOAD_TRAILING_STOP = 4318.24
 PRELOAD_DIFERENCIA_PRECIO= 50
 PRELOAD_PATRON = 'Tendencia Alcista Continuada'
 PRELOAD_BENEFICIO_NETO = -1.0
@@ -41,8 +41,8 @@ PORCENTAJE_BOLLINGER_BANDA_MEDIA = 0.75 # Porcentaje (entre 0 y 1) del límite e
 # 💰 PARÁMETROS DE GESTIÓN DE RIESGO AVANZADA (MONEY MANAGEMENT)
 TRAILING_STOP = 15.0                    # Mínimo de ganancia para activar la persecución inteligente (por defecto en %)
 DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
-TAKE_PROFIT = 30.0                      # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
-TAKE_PROFIT_USD = 20                    # 🔥 Modifica este valor por la ganancia deseada en dólares
+TAKE_PROFIT = 80.0                      # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
+TAKE_PROFIT_USD = 50                    # 🔥 Modifica este valor por la ganancia deseada en dólares
 STOP_LOSS  = -10.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
 STOP_LOSS_INICIAL_TRAILING = -20.0      # 🔴 Stop loss inicial antes de ser movido con el trailing stop (Modo IA)
 
@@ -166,7 +166,7 @@ historico_velas = None
 ultimo_patron = "Ninguno"
 
 historico_cuenta = []
-log_operacion = None
+log_operacion = ""
 error = ""
 
 movimiento_abrupto = {

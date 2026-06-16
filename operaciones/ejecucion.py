@@ -17,7 +17,7 @@ def debe_ejecutar_operacion():
         if resultado is not None:
             accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = resultado
 
-            if accion != "Mantener":
+            if accion != "No Abrir":
                 # Ajustar valores de TradingView a los valores de XTB                
                 diferencia_take_profit = abs(float(valor_entrada) - float(take_profit))
                 diferencia_trailing_stop = abs(float(valor_entrada) - float(trailing_stop))
@@ -62,7 +62,6 @@ def debe_ejecutar_operacion():
                     f"ℹ️  IA recomienda {accion}\n"
                     f"      Patrón              : {patron}\n"
                     f"      Explicación         : {explicacion}\n"
-                    #f"      Próx. Instrucciones : {instrucciones}\n"
                     f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                 )
         else:

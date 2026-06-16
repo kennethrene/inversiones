@@ -30,7 +30,7 @@ def ejecutar_operacion():
             inputs_filtrados = obtener_datos_filtro(velas)
             prompt_plantilla = getattr(prompt_apertura, configuracion_prompt["apertura"])
             prompt = prompt_plantilla.format(**inputs_filtrados)
-            
+
         esquema = getattr(prompt_apertura, "Esquema")
         
         if nombre_ia == "Gemini":

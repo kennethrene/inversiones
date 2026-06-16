@@ -125,15 +125,16 @@ def bot_scalping():
                     texto_trailing          = validar_trailing_stop()
                     texto_operacion_activa  = ui_operacion_activa(True)
 
-                    ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
+                    if parametros.activo_actual == parametros.datos_mapeados['Activo']:
+                        ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
 
-                    # Si no se cierra, entonces validar si se debe ajustar
-                    if not ejecutar_cierre_operacion:
-                        accion, motivo = reevaluar_operacion()
+                        # Si no se cierra, entonces validar si se debe ajustar
+                        if not ejecutar_cierre_operacion:
+                            accion, motivo = reevaluar_operacion()
 
-                        if accion == "Cerrar":
-                            ejecutar_cierre_operacion = True
-                            motivo_cierre = motivo
+                            if accion == "Cerrar":
+                                ejecutar_cierre_operacion = True
+                                motivo_cierre = motivo
                 else:
                     texto_operacion_activa = ui_operacion_activa(False)
                     parametros.hora_apertura_orden = None
@@ -150,7 +151,7 @@ def bot_scalping():
                     actualizar_informacion()
 
                 # Ejecución automática de operaciones
-                if not parametros.bloqueo_ejecutar_orden and not operacion_activa:
+                if not parametros.bloqueo_ejecutar_orden and (not operacion_activa or parametros.activo_actual != parametros.datos_mapeados['Activo']):
                     # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
                     if not parametros.USAR_IA and time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
                         continue # Salta la iteración si no ha pasado el tiempo mínimo
