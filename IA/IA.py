@@ -1,4 +1,5 @@
-from extraccion.velas import extraer_velas_para_IA
+from extraccion.velas import extraer_velas_para_IA, extraer_velas_para_indicadores
+from extraccion.indicadores import obtener_datos_indicadores
 import configuracion.parametros as parametros
 import IA.configuracion as configuracion
 from typing import Dict, Any, Optional
@@ -9,17 +10,26 @@ import IA.groq as groq
 
 def ejecutar_operacion():
     num_velas = 1
+    configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
 
-    if len(parametros.lista_velas_acumuladas) == 0:
-        num_velas = 61
+    if not configuracion_prompt["indicadores"]:
+        if len(parametros.lista_velas_acumuladas) == 0:
+            num_velas = 61
 
-    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
+        velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
+    else:
+        if len(parametros.lista_velas_acumuladas) == 0:
+            num_velas = 121
+        
+        velas, _ = obtener_datos_indicadores(extraer_velas_para_indicadores(parametros.activo_actual, Interval.in_5_minute, num_velas))
 
     if velas is not None and len(velas) > 0:
-        velas = formatear_velas_para_ia(velas)
-
         nombre_ia, modelo, cache, version, _, version_cache, _ = obtener_modelo_ia_activo(configuracion.MODELO_IA)
-        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
+
+        if not configuracion_prompt["indicadores"]:
+            velas = formatear_velas_para_ia(velas)
+        else:
+            velas = formatear_indicadores_para_ia(velas)
 
         if cache:
             prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{version_cache}_CACHE")
@@ -63,16 +73,27 @@ def ejecutar_operacion():
 
 def reevaluar_operacion():
     num_velas = parametros.velas_espera
-    if len(parametros.lista_velas_acumuladas) == 0:
-        num_velas = 61
 
-    velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
+    configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
+
+    if not configuracion_prompt["indicadores"]:
+        if len(parametros.lista_velas_acumuladas) == 0:
+            num_velas = 61
+
+        velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
+    else:
+        if len(parametros.lista_velas_acumuladas) == 0:
+            num_velas = 121
+        
+        velas, _ = obtener_datos_indicadores(extraer_velas_para_indicadores(parametros.activo_actual, Interval.in_5_minute, num_velas))
 
     if velas is not None and len(velas) > 0:
-        velas = formatear_velas_para_ia(velas)
-
         nombre_ia, modelo, cache, _, version, _, version_cache = obtener_modelo_ia_activo(configuracion.MODELO_IA)
-        configuracion_prompt = obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)        
+        
+        if not configuracion_prompt["indicadores"]:
+            velas = formatear_velas_para_ia(velas)
+        else:
+            velas = formatear_indicadores_para_ia(velas)
 
         if cache:
             prompt_reevaluacion = importlib.import_module(f"IA.prompts.reevaluacion.{nombre_ia}.{version_cache}_CACHE")
@@ -138,6 +159,42 @@ def formatear_velas_para_ia(datos):
     # Unir todo en un solo string de texto plano separado por saltos de línea
     return "\n".join(lineas)
 
+def formatear_indicadores_para_ia(df_con_indicadores):
+    """
+    Recibe un DataFrame de Pandas que ya tiene calculados los indicadores:
+    ['Open', 'High', 'Low', 'Close', 'RSI_4', 'MACD_Hist', 'Bollinger_Sup', 'Bollinger_Mid', 'Bollinger_Inf', 'VP_actual']
+    
+    Limpia los NaN, recorta a las últimas 60 velas, genera el índice retrospectivo
+    y devuelve la matriz en formato de texto plano estructurado por columnas.
+    """
+    # 1. Crear una copia local para evitar modificar el DataFrame original en tu backend
+    df = df_con_indicadores.copy()
+    
+    # 2. Limpieza de seguridad: Eliminar filas iniciales que se quedaron sin datos por el warm-up (NaN)
+    columnas_control = ['RSI_4', 'MACD_Hist', 'Bollinger_Sup', 'Bollinger_Mid', 'Bollinger_Inf', 'VP_actual']
+    df.dropna(subset=columnas_control, inplace=True)
+    
+    # 3. Recorte Estricto: Nos quedamos únicamente con las últimas 60 velas del historial
+    df_ia = df.tail(60).copy()
+    total_filas = len(df_ia)
+    
+    # 4. Generar el índice retrospectivo exacto exigido por tus patrones (Ej: -59 a 0)
+    df_ia['Vela'] = range(-total_filas + 1, 1)
+    
+    # 5. Redondeo Cuantitativo: 2 decimales para optimizar drásticamente la lectura de la IA
+    columnas_precio = ['Open', 'High', 'Low', 'Close', 'Bollinger_Sup', 'Bollinger_Mid', 'Bollinger_Inf']
+    df_ia[columnas_precio] = df_ia[columnas_precio].round(2)
+    df_ia[['RSI_4', 'MACD_Hist', 'VP_actual']] = df_ia[['RSI_4', 'MACD_Hist', 'VP_actual']].round(2)
+    
+    # 6. Reordenar las columnas en una jerarquía estructural limpia para la inyección del prompt
+    columnas_finales = ['Vela', 'Open', 'High', 'Low', 'Close', 'RSI_4', 'MACD_Hist', 'Bollinger_Sup', 'Bollinger_Mid', 'Bollinger_Inf', 'VP_actual']
+    df_resultado = df_ia[columnas_finales].reset_index(drop=True)
+    
+    # 7. Transformación a Texto Plano Tabular (Sin comas, alineado de forma visual por espacios)
+    matriz_string_final = df_resultado.to_string(index=False)
+    
+    return matriz_string_final
+
 def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str, str]:
     # 1. Filtramos las estrategias que tienen la bandera 'activo' en True
     estrategias_activas = [
@@ -162,6 +219,7 @@ def obtener_prompts_estrategia_activa(configuracion: Dict[str, Any]) -> Dict[str
         "estrategia": nombre_estrategia,
         "apertura": datos_estrategia["apertura"],
         "reevaluacion": datos_estrategia["reevaluacion"],
+        "indicadores": datos_estrategia["indicadores"],
     }
 
 def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bool]]:

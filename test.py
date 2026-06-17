@@ -2,7 +2,7 @@ import IA.IA as IA
 import configuracion.parametros as parametros
 import IA.configuracion as configuracion
 
-parametros.activo_actual = "US100"
+parametros.activo_actual = "US500"
 parametros.datos_mapeados['Operacion'] = 'Compra'
 parametros.datos_mapeados['Precio Apertura'] = "30535.29"
 parametros.historico_rsi = [10, 20]
@@ -15,6 +15,7 @@ parametros.datos_mapeados["Patron"] = 'Doble Suelo'
 parametros.datos_mapeados['Beneficio Neto'] = -6.97
 
 configuracion.proximas_instrucciones = "SI el Close de la Vela 0 rompe el Mínimo Absoluto (28619.29) con una mecha inferior <= 0.1x cuerpo y tamaño de cuerpo >= 1.2x VP (152.82), ENTONCES ejecutar Venta. SI el precio rebota y forma un Martillo en el Mínimo Absoluto, ENTONCES ejecutar Compra."
+configuracion.explicacion_decision = "el RSI_4 se encuentra en 74.77 indicando fuerza compradora"
 
 resultado = IA.ejecutar_operacion()
 #resultado = IA.reevaluar_operacion()

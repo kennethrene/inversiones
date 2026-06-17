@@ -2,9 +2,16 @@ HORAS_CACHE = 2
 
 TIPO_PROMPT = {
     "Patrones": {
-        "activo": True,
+        "activo": False,
         "apertura": "PROMPT_PATRONES",        
-        "reevaluacion": "PROMPT_PATRONES_REEVALUACION"
+        "reevaluacion": "PROMPT_PATRONES_REEVALUACION",
+        "indicadores": False
+    },
+    "Híbrido": {
+        "activo": True,
+        "apertura": "PROMPT_HIBRIDO",
+        "reevaluacion": "PROMPT_HIBRIDO_REEVALUACION",
+        "indicadores": True
     }
 }
 
@@ -12,10 +19,10 @@ MODELO_IA = {
     "Gemini": {
         "activo": True,
         "cache": False,
-        "version_apertura": "1_2",
-        "version_reevaluacion": "1_2",
-        "version_apertura_cache": "1_0",
-        "version_reevaluacion_cache": "1_0",
+        "version_apertura": "1_0i",
+        "version_reevaluacion": "1_0i",
+        "version_apertura_cache": "1_0i",
+        "version_reevaluacion_cache": "1_0i",
         "modelos": [
             {
                 "activo": True,

@@ -107,12 +107,26 @@ PROHIBICIÓN: Si el mercado está en "Lateral_Consolidacion" y NO se activa el E
    - Stop Loss en Compra (Suelo): Se coloca a una distancia exacta de 0.3x VP por debajo del Mínimo Local del RCL de las últimas 10 velas.
    - Trailing Stop Activation: Establécelo en 0 (No aplica para operaciones cortas de rango).
    - Take Profit: Se colocará exactamente en el punto medio numérico del canal del RCL actual, mediante la fórmula exacta: [Mínimo Local RCL + (Ancho del RCL / 2)].
-7. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
-   - Determina con criterio conservador un número entero estrictamente entre 1 y 4 (máximo) para programar cuándo debe despertar el segundo prompt auditor para revisar esta entrada.
-   - Asigna 1 vela (5 minutos): Si la entrada fue gatillada por un Patrón de Ausencia de Rechazo en Extremos O por la regla de "OPERACIÓN EXCLUSIVA EN RANGO LATERAL". Al ser movimientos rápidos o de momentum, el sistema requiere verificación inmediata en la siguiente vela.
-   - Asigna 1 a 2 velas (5 a 10 minutos): Si la entrada fue gatillada por un patrón de rechazo rápido de vela única (Martillo o Martillo Invertido) o una Envolvente sobre los extremos absolutos.
-   - Asigna 3 a 4 velas (15 a 20 minutos): Si la entrada fue gatillada por un patrón geométrico complejo o de continuación (Doble Techo/Suelo, HCH, Banderas, Cuñas).
-   - Si la acción recomendada es "No Abrir", establece por defecto este valor en 1 vela.
+7. COLOCACIÓN DE NIVELES PARA OPERACIONES EN TENDENCIA O MOMENTUM
+    Si la posición fue gatillada bajo cualquier patrón de Tendencia (Vela Única/Múltiples) o Momentum (Ausencia de Rechazo), ignora por completo la Regla 6 y aplica esta colocación matemática estricta:
+    - Stop Loss en Venta (Gatillo Bajista / Corto): Se coloca a una distancia exacta de 0.5x VP_actual por encima del Máximo Absoluto de tu rango de control asignado (25 velas, o el número de velas si el patrón de origen lo amerita). Esto blinda la posición detrás de la resistencia estructural real.
+    - Stop Loss en Compra (Gatillo Alcista / Largo):Se coloca a una distancia exacta de 0.5x VP_actual por debajo del Mínimo Absoluto de tu rango de control asignado (25 velas, o el número de velas si el patrón de origen lo amerita). Esto blinda la posición debajo del soporte estructural real.
+    - Trailing Stop Activation (Gestión Dinámica de Tendencia): Establécelo a una distancia exacta de 0.5x VP_actual desde tu precio de entrada original. A diferencia del rango lateral, en tendencia el uso de un trailing stop activo es obligatorio para proteger el capital en impulsos rápidos.
+    - Take Profit (Proyección por Extensión Matemática):Se colocará buscando un Ratio Riesgo-Beneficio mínimo y eficiente, calculado mediante la distancia rígida del riesgo inicial multiplicada por un factor de tendencia. Fórmula exacta:
+        * En COMPRA: Precio de entrada original + (Distancia entre Entrada y Stop Loss original * 1.2)
+        * En VENTA: Precio de entrada original - (Distancia entre Entrada y Stop Loss original * 1.2)
+8. Cálculo Dinámico Cauto de Ventana de Auditoría (`velas_espera_validacion`):
+   - Determina con criterio conservador un número entero estrictamente entre 1 y 4 para programar cuándo debe despertar el segundo prompt auditor para revisar esta orden.
+   - Aplica de forma rígida las siguientes reglas de asignación numérica (queda prohibido usar rangos o valores intermedios):
+     * Asigna EXACTAMENTE 1 vela (5 minutos):
+       - Si la acción recomendada es "No Abrir". Esto es obligatorio para que el bot despierte en la siguiente vela a evaluar el campo `instrucciones_proximo_llamado`.
+       - Si la entrada fue gatillada bajo el patrón "Ausencia de Rechazo en Extremos".
+       - Si la entrada fue gatillada bajo la regla de "OPERACIÓN EXCLUSIVA EN RANGO LATERAL".
+       Al ser configuraciones de alta velocidad, rompimiento o canales estrechos, el sistema requiere auditoría inmediata.
+     * Asigna EXACTAMENTE 2 velas (10 minutos):
+       - Si la entrada fue gatillada por un patrón de reversión rápida de Vela Única (Martillo, Martillo Invertido, Estrella Fugaz, Hombre Colgado) o de Velas Múltiples (Envolventes, Estrellas del Amanecer/Atardecer) que ocurra FUERA de un rango lateral.
+     * Asigna EXACTAMENTE 3 a 4 velas (15 a 20 minutos):
+       - Únicamente si la entrada fue gatillada por un patrón geométrico complejo de desarrollo lento (Doble Techo/Suelo, HCH, Banderas o Cuñas). Utiliza 3 velas si la volatilidad VP_actual es alta, y 4 velas si el mercado está lento.
 """
 
 INPUTS = [
