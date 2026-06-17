@@ -28,58 +28,44 @@ Umbral de Volatilidad Mínima = 1.2 x VP.
   - Condición de Ejecución: SI el Close de la Vela 0 es estrictamente mayor al Máximo Absoluto determinado en tu rango de evaluación dinámico, O estrictamente menor al Mínimo Absoluto de dicho rango; anula el estado "Lateral_Consolidacion" de inmediato y clasifica el mercado como "Tendencial_Ruptura".
 PROHIBICIÓN: Si el mercado está en "Lateral_Consolidacion" y NO se activa el Escenario C, queda prohibido operar estrategias tendenciales ordinarias (Reglas 1 a 4). Solo se permite la "OPERACIÓN EXCLUSIVA EN RANGO LATERAL" (Regla 6).
 
-### REGLAS ALGORÍTMICAS ESTRICTAS DE VALIDACIÓN POR TIPO DE PATRÓN
+### REGLAS ALGORÍTMICAS ADAPTATIVAS DE VALIDACIÓN POR TIPO DE PATRÓN
 (Solo aplicables si el mercado NO fue descartado por el Filtro de Tendencia Lateral previo):
 
-1. GEOMETRÍA RÍGIDA DE REVERSIÓN (Doble Techo/Suelo, HCH / HCH Invertido):
-   - Exige una tolerancia máxima de ±0.05% de diferencia matemática entre los Highs (techos) o Lows (suelos) de los picos/valles.
-   - FILTRO DE CADUCIDAD POST-RUPTURA (EVITAR FALSOS GIROS): El gatillo de entrada solo es válido si el precio de CIERRE de la Vela 0 acaba de romper la línea de cuello (neckline) dentro de una ventana máxima de 12 velas desde la formación del segundo pico u hombro derecho.
-   - REGLA DE INVALIDEZ POR TIEMPO: Si la ruptura del neckline ocurrió hace más de 4 velas cerradas atrás y el precio no ha avanzado al menos 1.0x tu "Vela Promedio" (VP) a favor del movimiento (mostrando estancamiento, compresión lateral o velas seguidas indecisas que simulan un cambio pero no avanzan), el patrón pierde toda su validez estadística de forma fulminante. Ante este escenario, prohíbe abrir operaciones, descarta la estructura, clasifica el patrón detectado como "Ninguno" y establece la acción sugerida en "No Abrir".
+1. GEOMETRÍA FLEXIBLE DE REVERSIÓN (Doble Techo/Suelo, HCH / HCH Invertido):
+- TOLERANCIA DINÁMICA: La diferencia matemática entre los Highs (techos) o Lows (suelos) de los picos/valles debe ser estrictamente ≤ 0.25x tu "Vela Promedio" (VP). Queda prohibido usar un porcentaje fijo; la holgura debe adaptarse a la volatilidad actual para absorber barridos de liquidez institucionales.
+- FILTRO DE CADUCIDAD POST-RUPTURA: El gatillo de entrada solo es válido si el precio de CIERRE de la Vela 0 acaba de romper la línea de cuello (neckline) dentro de una ventana máxima de 12 velas desde la formación del segundo pico u hombro derecho.
+- REGLA DE INVALIDEZ POR TIEMPO: Si la ruptura del neckline ocurrió hace más de 4 velas cerradas atrás y el precio no ha avanzado al menos 1.0x tu "Vela Promedio" (VP) a favor del movimiento, el patrón pierde toda su validez. Clasifica el patrón como "Ninguno" y establece la acción sugerida en "No Abrir".
 
 2. CONTINUACIÓN CHARTISTA (Banderas, Cuñas):
-   - Exige compresión matemática del rango: máximos descendentemente progresivos y mínimos ascendentemente progresivos (o viceversa para canales bandera).
-   - El gatillo de entrada es válido únicamente si el precio de CIERRE de la Vela 0 quedó 100% fuera de la línea de contratendencia que formaba el canal.
+- Exige compresión matemática del rango: máximos descendentemente progresivos y mínimos ascendentemente progresivos (o viceversa para canales bandera).
+- El gatillo de entrada es válido únicamente si el precio de CIERRE de la Vela 0 quedó 100% fuera de la línea de contratendencia que formaba el canal.
 
 3. PATRONES DE RECHAZO DE VELA ÚNICA (Martillos, Martillos Invertidos, Estrellas Fugaces, Hombre Colgado):
-   - UBICACIÓN MACRO:
-    * Solo son válidos si ocurren directamente sobre el Máximo o Mínimo Absoluto de las últimas 20 velas del historial (Velas -19 a 0).
-    * Ignora por completo estos patrones si la Vela 0 cierra en zonas medias del rango de estas 20 velas.
-   
-   - PROPORCIÓN MATEMÁTICA DEL RECHAZO (MECHA VS CUERPO DE VELA 0):
-    * Martillo y Hombre Colgado: La longitud de la mecha INFERIOR debe ser estrictamente ≥ 2.5 veces el tamaño del cuerpo real de la vela. La mecha superior debe ser inexistente o extremadamente pequeña (< 0.1x del cuerpo real).
-    * Martillo Invertido y Estrella Fugace: La longitud de la mecha SUPERIOR debe ser estrictamente ≥ 2.5 veces el tamaño del cuerpo real de la vela. La mecha inferior debe ser inexistente o extremadamente pequeña (< 0.1x del cuerpo real).
- 
-   - CASOS OPERATIVOS CIENTÍFICOS:
-    * COMPRA (Gatillo Alcista): Solo se permite si se detecta un Martillo o un Martillo Invertido y su Low coincide exactamente con el Mínimo Absoluto de las últimas 20 velas.
-    * VENTA (Gatillo Bajista): Solo se permite si se detecta una Estrella Fugace o un Hombre Colgado y su High coincide exactamente con el Máximo Absoluto de las últimas 20 velas.
+- UBICACIÓN MACRO EN ZONA DE SOPORTE/RESISTENCIA: No busques una coincidencia exacta de decimales. El patrón solo es válido si ocurre dentro de una "Zona de Reacción" perimetral. El Low (para compras) o el High (para ventas) debe estar a una distancia máxima de ±0.15x VP respecto al Mínimo o Máximo Absoluto de las últimas 20 velas (Velas -19 a 0). Ignora el patrón si ocurre fuera de este umbral adaptativo.
+- PROPORCIÓN MATEMÁTICA DEL RECHAZO (MECHA VS CUERPO DE VELA 0):
+  * Martillo y Hombre Colgado: La longitud de la mecha INFERIOR debe ser estrictamente ≥ 2.5 veces el tamaño del cuerpo real de la vela. La mecha superior debe ser ≤ 0.1x del cuerpo real.
+  * Martillo Invertido y Estrella Fugace: La longitud de la mecha SUPERIOR debe ser estrictamente ≥ 2.5 veces el tamaño del cuerpo real de la vela. La mecha inferior debe ser ≤ 0.1x del cuerpo real.
+- CASOS OPERATIVOS:
+  * COMPRA (Gatillo Alcista): Se activa si se detecta Martillo o Martillo Invertido dentro de la zona del Mínimo Absoluto de las últimas 20 velas.
+  * VENTA (Gatillo Bajista): Se activa si se detecta Estrella Fugace o Hombre Colgado dentro de la zona del Máximo Absoluto de las últimas 20 velas.
 
 4. PATRONES DE REVERSIÓN DE VELAS MÚLTIPLES (Envolventes, Estrellas del Atardecer/Amanecer):
-   - UBICACIÓN MACRO FLEXIBLE PARA REVERSIÓN: 
-    * Son válidos si ocurren dentro del tercio superior (para ventas) o tercio inferior (para compras) del rango total de las últimas 20 velas (Velas -19 a 0).
-    * Alternativa por Ruptura Dinámica: También son válidos en cualquier zona si el cuerpo de la Vela 0 rompe con fuerza y cierra estrictamente por fuera del extremo local del RCL de las últimas 7 velas (Velas -6 a 0). No exijas que la Vela 0 toque la línea exacta del extremo de las 20 velas si el momentum de giro ya es evidente.
-
-   - PATRÓN ENVOLVENTE ULTRA-PRECISO (GATILLO DE ACCIÓN):
-     * Dirección de Compra (Gatillo Alcista): El cuerpo real de la Vela 0 debe ser alcista y cubrir completamente (100% o más) el cuerpo real de la Vela -1. Además, el tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 1.0x tu "Vela Promedio" (VP) para confirmar inyección de volumen comprador.
-     * Dirección de Venta (Gatillo Bajista): El cuerpo real de la Vela 0 debe ser bajista y cubrir completamente (100% o más) el cuerpo real de la Vela -1. Además, el tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 1.0x tu "Vela Promedio" (VP) para confirmar inyección de volumen vendedor.
-     
-   - PATRÓN ESTRELLA DEL ATARDECER / AMANECER (GIRO COMPLEJO EN 3 VELAS):
-     * Estrella del Atardecer (Gatillo Bajista en Techos): Requiere una secuencia estricta de 3 velas cerradas (Velas -2, -1 y 0):
-       1. Vela -2: Vela alcista de rango amplio y cuerpo fuerte.
-       2. Vela -1: Vela pequeña de indecisión (Doje o peonza) cuyo cuerpo real es estrictamente < 0.4x el cuerpo de la Vela -2, y que idealmente abre con un ligero gap o se mantiene estancada en el extremo alto.
-       3. Vela 0 (Actual): Vela bajista agresiva cuyo precio de cierre penetra profundamente y se sitúa estrictamente por debajo del 50% del cuerpo real de la Vela -2.
-     * Estrella del Amanecer (Gatillo Alcista en Suelos): Aplica la lógica matemática inversa de 3 velas para la secuencia bajista-indecisión-alcista en la parte baja del rango.
+- UBICACIÓN MACRO FLEXIBLE PARA REVERSIÓN: Son válidos si ocurren dentro del tercio superior (para ventas) o tercio inferior (para compras) del rango total de las últimas 20 velas, O si el cuerpo de la Vela 0 rompe y cierra estrictamente por fuera del extremo local del RCL de las últimas 7 velas.
+- PATRÓN ENVOLVENTE ADAPTATIVO (GATILLO DE ACCIÓN):
+  * Dirección de Compra (Gatillo Alcista): El cuerpo real de la Vela 0 debe ser alcista y cubrir el 100% o más del cuerpo real de la Vela -1. Para confirmar la inyección de volumen comprador sin sufrir el sesgo de velas previas de clímax, el tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 0.6x tu "Vela Promedio" (VP).
+  * Dirección de Venta (Gatillo Bajista): El cuerpo real de la Vela 0 debe ser bajista y cubrir el 100% o más del cuerpo real de la Vela -1. El tamaño del cuerpo de la Vela 0 debe ser estrictamente ≥ 0.6x tu "Vela Promedio" (VP).
+- PATRÓN ESTRELLA DEL ATARDECER / AMANECER (GIRO COMPLEJO EN 3 VELAS):
+  * Estrella del Atardecer (Gatillo Bajista): Secuencia estricta de 3 velas (Velas -2, -1 y 0): 1. Vela -2 alcista de cuerpo fuerte. 2. Vela -1 de indecisión cuyo cuerpo real es < 0.4x el cuerpo de la Vela -2. 3. Vela 0 bajista cuyo cierre se sitúa estrictamente por debajo del 50% del cuerpo real de la Vela -2.
+  * Estrella del Amanecer (Gatillo Alcista): Aplica la lógica matemática inversa de 3 velas para la secuencia bajista-indecisión-alcista en la parte baja del rango.
 
 5. PATRÓN DE AUSENCIA DE RECHAZO EN EXTREMOS (Ruptura por Absorción / Momentum):
-	•   UBICACIÓN MACRO Y FILTRO DE FRESCURA DE RUPTURA (ESTRICTO):
-      - El precio de CIERRE de la Vela 0 debe ser estrictamente MENOR al Mínimo Absoluto (para ventas) o MAYOR al Máximo Absoluto (para compras) de las 60 velas.
-      - REGLA DE EXCLUSIÓN POR RUPTURA PREVIA (EVITAR CLÍMAX): El modelo debe verificar de forma retrospectiva las velas previas. SI el precio de CIERRE de la Vela -1 O de la Vela -2 YA se encontraba por fuera del Máximo o Mínimo Absoluto calculado para el bloque de las 60 velas, significa que la ruptura NO es fresca y el mercado ya está extendido. En este caso, queda ESTRICTAMENTE PROHIBIDO activar la Regla 5. Clasifica el patrón como "Ninguno" y establece la acción en "No Abrir" por riesgo de reversión/clímax.
-	•	VALIDACIÓN MATEMÁTICA DE AUSENCIA DE RECHAZO:
-      - Para Continuación Alcista (Ruptura de Máximo): La mecha superior de la Vela 0 debe ser prácticamente inexistente, con un tamaño estrictamente ≤ 0.1x del cuerpo real de la vela. El cuerpo debe ser alcista.
-      - Para Continuación Bajista (Ruptura de Mínimo): La mecha inferior de la Vela 0 debe ser prácticamente inexistente, con un tamaño estrictamente ≤ 0.1x del cuerpo real de la vela. El cuerpo debe ser bajista.
-	•	FILTRO DE VOLUMEN/MOMENTUM CON VP: El cuerpo real de la Vela 0 (Close - Open) debe ser estrictamente ≥ 1.2x tu "Vela Promedio" (VP). Esto garantiza que la ruptura se hace con intención y no por agotamiento.
-	•	CASOS OPERATIVOS CIENTÍFICOS:
-      - COMPRA (Gatillo Alcista): Si la Vela 0 closes por encima del Máximo Absoluto con mecha superior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
-      - VENTA (Gatillo Bajista): Si la Vela 0 closes por debajo del Mínimo Absoluto con mecha inferior ≤ 0.1x cuerpo y tamaño de cuerpo ≥ 1.2x VP.
+- UBICACIÓN MACRO Y FILTRO DE FRESCURA DE RUPTURA (ESTRICTO):
+  * El precio de CIERRE de la Vela 0 debe ser estrictamente menor al Mínimo Absoluto (para ventas) o mayor al Máximo Absoluto (para compras) de las 60 velas.
+  * REGLA DE EXCLUSIÓN POR RUPTURA PREVIA (EVITAR CLÍMAX DE AGOTAMIENTO): Realiza un escaneo retrospectivo. Si el precio de CIERRE de la Vela -1 O de la Vela -2 YA se encontraba por fuera del Máximo o Mínimo Absoluto calculado para el bloque de 60 velas, significa que la ruptura NO es fresca y el mercado se encuentra en fase extendida o clímax institucional. En este escenario, queda ESTRICTAMENTE PROHIBIDO activar la Regla 5. Descarta el patrón, clasifícalo como "Ninguno" y establece la acción en "No Abrir" por riesgo inminente de reversión.
+- VALIDACIÓN MATEMÁTICA DE AUSENCIA DE RECHAZO:
+  * Para Continuación Alcista: Mecha superior de la Vela 0 estrictamente ≤ 0.1x del cuerpo real. Cuerpo alcista.
+  * Para Continuación Bajista: Mecha inferior de la Vela 0 estrictamente ≤ 0.1x del cuerpo real. Cuerpo bajista.
+- FILTRO DE VOLUMEN CON VP: El cuerpo real de la Vela 0 (Close - Open) debe ser estrictamente ≥ 1.2x tu "Vela Promedio" (VP) para garantizar intención real en la ruptura primaria.
 
 6. OPERACIÓN EXCLUSIVA EN RANGO LATERAL (Solo aplicable si el mercado FUE clasificado como "Lateral_Consolidacion"):
    - REGLA DE ACTIVACIÓN: Queda anulada la prohibición operativa si y solo si el precio de la Vela 0 interactúa con los extremos del RCL de las últimas 7 velas.
