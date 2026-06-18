@@ -50,22 +50,20 @@ def ejecutar_operacion():
             objeto_validado = groq.ejecutar_prompt(modelo, prompt, esquema, True)
 
         if objeto_validado is not None:
-            accion          = objeto_validado.decision_accion
-            patron          = objeto_validado.nombre_del_patron
-            explicacion     = objeto_validado.explicacion_tecnica
-            confianza       = objeto_validado.fiabilidad
-            take_profit     = objeto_validado.take_profit
-            stop_loss       = objeto_validado.stop_loss
-            trailing_stop   = objeto_validado.trailing_stop_activation
-            valor_entrada   = objeto_validado.precio_entrada
-            velas_espera    = objeto_validado.velas_espera_validacion
-            
-            if objeto_validado.puntos_control_patron is not None:
-                puntos_control = objeto_validado.puntos_control_patron
-            else:
-                puntos_control = []
+            accion          = objeto_validado.a
+            take_profit     = objeto_validado.tp
+            stop_loss       = objeto_validado.sl
+            trailing_stop   = objeto_validado.ts
+            velas_espera    = objeto_validado.v
+            valor_entrada   = objeto_validado.pe
+            explicacion     = objeto_validado.p
 
-            return (accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control)
+            parametros.datos_fuente_velas["Valor Apertura"] = valor_entrada
+            parametros.datos_fuente_velas["Stop Loss"] = stop_loss
+            parametros.datos_fuente_velas["Take Profit"] = take_profit
+            parametros.datos_fuente_velas["Trailing Stop"] = trailing_stop
+            
+            return (accion, take_profit, stop_loss, trailing_stop, velas_espera, valor_entrada, explicacion)
         else:
             return None
     else:
@@ -115,22 +113,18 @@ def reevaluar_operacion():
             objeto_validado = groq.ejecutar_prompt(modelo, prompt, esquema, False)
 
         if objeto_validado is not None:
-            reevaluacion       = objeto_validado.reevaluacion 
-            patron             = objeto_validado.nombre_del_patron
-            explicacion_reeval = objeto_validado.explicacion_reevaluacion
-            confianza          = objeto_validado.fiabilidad
-            take_profit        = objeto_validado.take_profit
-            stop_loss          = objeto_validado.stop_loss
-            trailing_stop      = objeto_validado.trailing_stop_activation
-            valor_entrada      = objeto_validado.precio_entrada
-            velas_espera       = objeto_validado.velas_espera_validacion
-            
-            if objeto_validado.puntos_control_patron is not None:
-                puntos_control = objeto_validado.puntos_control_patron
-            else:
-                puntos_control = []
+            reevaluacion       = objeto_validado.a
+            explicacion_reeval = objeto_validado.p
+            take_profit        = objeto_validado.tp
+            stop_loss          = objeto_validado.sl
+            trailing_stop      = objeto_validado.ts
+            velas_espera       = objeto_validado.v
 
-            return (reevaluacion, patron, confianza, explicacion_reeval, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control)
+            parametros.datos_fuente_velas["Stop Loss"] = stop_loss
+            parametros.datos_fuente_velas["Take Profit"] = take_profit
+            parametros.datos_fuente_velas["Trailing Stop"] = trailing_stop
+
+            return (reevaluacion, take_profit, stop_loss, trailing_stop, velas_espera, explicacion_reeval)
         else:
             return None
     else:

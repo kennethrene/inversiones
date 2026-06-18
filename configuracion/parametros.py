@@ -60,7 +60,6 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # ============================================================================
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS MANUALES
 # ============================================================================
-USAR_IA = True
 CRITERIO6 = False # Extremo
 CRITERIO7 = True # IA
 
@@ -82,13 +81,10 @@ CRITERIO_INDICADORES = [
     }
 ]
 
-# ===========================================================================
-# Estructura global en memoria para compartir los datos entre hilos
-# ===========================================================================
 datos_graficos = {
-    "hora_vela": None, # Guarda la estampa de tiempo del momento que el patrón gráfico fue detectado
+    "hora_vela": None,
     "datos_velas": pd.DataFrame(),
-    "operacion": None, # COMPRA o VENTA
+    "operacion": None,
     "patron": "Ninguno",
     "log": ""
 }
@@ -105,6 +101,13 @@ datos_mapeados = {
     "Operacion": "N/D",
     "Criterio Apertura": "N/D",
     "Patron": "N/D"
+}
+
+datos_fuente_velas = {
+    "Valor Apertura": 0.0,
+    "Stop Loss": 0.0,
+    "Take Profit": 0.0,
+    "Trailing Stop": 0.0
 }
 
 # 🟢 CONTADORES DE ESTADÍSTICA EN VIVO

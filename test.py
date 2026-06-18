@@ -14,15 +14,34 @@ parametros.diferencia_precio = 50
 parametros.datos_mapeados["Patron"] = 'Doble Suelo'
 parametros.datos_mapeados['Beneficio Neto'] = -6.97
 
-configuracion.proximas_instrucciones = "SI el Close de la Vela 0 rompe el Mínimo Absoluto (28619.29) con una mecha inferior <= 0.1x cuerpo y tamaño de cuerpo >= 1.2x VP (152.82), ENTONCES ejecutar Venta. SI el precio rebota y forma un Martillo en el Mínimo Absoluto, ENTONCES ejecutar Compra."
-configuracion.explicacion_decision = "el RSI_4 se encuentra en 74.77 indicando fuerza compradora"
+configuracion.explicacion_decision = "VP=2.58 | RCL=6.27 | BCA=1 | Filtro=Lateral_Consolidacion | Tipo=Rango_Lateral"
 
-resultado = IA.ejecutar_operacion()
-#resultado = IA.reevaluar_operacion()
+apertura = False
+
+if apertura:
+    resultado = IA.ejecutar_operacion()
+else:
+    resultado = IA.reevaluar_operacion()
+
 if resultado is None:
     print("No se ejecutó la IA")
 else:
-    accion, patron, confianza, explicacion, take_profit, stop_loss, trailing_stop, valor_entrada, velas_espera, puntos_control = resultado
+    if apertura:
+        accion, take_profit, stop_loss, trailing_stop, velas_espera, valor_entrada, explicacion = resultado
 
-    #print(f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit} - Stop loss: {stop_loss} -  Trailing Stop: {trailing_stop} - Velas de espera: {velas_espera} - Explicación: {explicacion} -  Próximas instrucciones: {instrucciones}")
-    print(f"ℹ️  IA recomienda {accion}. Patrón: {patron} - Confianza: {confianza} - Take profit: {take_profit} - Stop loss: {stop_loss} -  Trailing Stop: {trailing_stop} - Velas de espera: {velas_espera} - Explicación: {explicacion}")
+        print(f"ℹ️  IA recomienda {accion}\n"
+            f"      Valor de entrada    : {valor_entrada:.2f}\n"
+            f"      Take profit         : {take_profit:.2f}\n"
+            f"      Stop loss           : {stop_loss:.2f}\n"
+            f"      Trailing Stop       : {trailing_stop:.2f}\n"
+            f"      Explicación         : {explicacion}\n"
+            f"      Próxima validación  : {velas_espera} velas")
+    else:
+        accion, take_profit, stop_loss, trailing_stop, velas_espera, explicacion = resultado
+
+        print(f"ℹ️  IA recomienda {accion}\n"
+            f"      Take profit         : {take_profit:.2f}\n"
+            f"      Stop loss           : {stop_loss:.2f}\n"
+            f"      Trailing Stop       : {trailing_stop:.2f}\n"
+            f"      Explicación         : {explicacion}\n"
+            f"      Próxima validación  : {velas_espera} velas")

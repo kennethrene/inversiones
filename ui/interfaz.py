@@ -163,28 +163,6 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
             f"  ───────────────────────────────────\n"
             f"    Inactivo (Sin operaciones en ejecución)\n"
         )
-    
-    if not parametros.USAR_IA:
-        if activo:
-            return (
-                f"{texto_separador}\n"
-                f" 🧭 TRAILING STOP\n"
-                f"  ───────────────────────────────────\n"
-                f"   🔥 Activado\n"
-                f"   🔥 Máximo rendimiento alcanzado : +{parametros.maximo_rendimiento_alcanzado:.2f}%\n"
-                f"   🔥 Caída desde el último pico   : {caida_desde_pico:.2f}%\n"
-                f"   🔥 % Activación de trailing     : {parametros.TRAILING_STOP}%\n"
-                f"   🔥 % Trailing stop              : {parametros.DISTANCIA_TRAILING_MAXIMA}%\n"
-            )
-        else:
-            return (
-                f"{texto_separador}\n"
-                f" 🧭 TRAILING STOP\n"
-                f"  ───────────────────────────────────\n"
-                f"   💤 Inactivo\n"
-                f"   % Actual    : {parametros.rendimiento_actual:+.2f}%\n"
-                f"   % Requerido : {parametros.TRAILING_STOP}%\n"
-            )
     else:
         return (
                 f"{texto_separador}\n"
@@ -206,15 +184,7 @@ def ui_stop_loss(activo):
             f"   🔴 FIJADO: --\n"
             f"   🔴 ACTUAL: --\n"
         )
-    elif not parametros.USAR_IA:
-        return (
-            f"{texto_separador}\n"
-            f" 🧭 STOP LOSS ACTUAL\n"
-            f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}%\n"
-            f"   🔴 ACTUAL: {parametros.rendimiento_actual:+.2f}%\n"
-        )
-    elif parametros.USAR_IA:
+    else:
         return (
             f"{texto_separador}\n"
             f" 🧭 STOP LOSS ACTUAL\n"

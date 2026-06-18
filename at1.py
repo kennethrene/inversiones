@@ -152,10 +152,6 @@ def bot_scalping():
 
                 # Ejecución automática de operaciones
                 if not parametros.bloqueo_ejecutar_orden and (not operacion_activa or parametros.activo_actual != parametros.datos_mapeados['Activo']):
-                    # 🔥 CONTROL DE ENFRIAMIENTO TRAS CIERRE
-                    if not parametros.USAR_IA and time.time() - parametros.TIEMPO_ULTIMO_CIERRE < parametros.SEGUNDOS_ENFRIAMIENTO:
-                        continue # Salta la iteración si no ha pasado el tiempo mínimo
-
                     # Validar y abrir posicion en caso que se cumplan las condiciones
                     ejecutar_operacion()
 

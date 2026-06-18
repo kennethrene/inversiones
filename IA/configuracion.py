@@ -4,11 +4,11 @@ TIPO_PROMPT = {
     "Patrones": {
         "activo": True,
         "apertura": "PROMPT_PATRONES",
-        "version_apertura": "1_4",
-        "version_apertura_cache": "1_0",
+        "version_apertura": "2_0",
+        "version_apertura_cache": "2_0",
         "reevaluacion": "PROMPT_PATRONES_REEVALUACION",
-        "version_reevaluacion": "1_2",
-        "version_reevaluacion_cache": "1_0",
+        "version_reevaluacion": "2_0",
+        "version_reevaluacion_cache": "2_0",
         "indicadores": False
     },
     "Híbrido": {
@@ -63,4 +63,3 @@ MODELO_IA = {
 }
 
 explicacion_decision = ""
-proximas_instrucciones = "Ninguna"

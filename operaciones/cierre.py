@@ -10,21 +10,11 @@ def operacion_debe_cerrar():
 
     ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_stop_loss(parametros.rendimiento_actual)    
     
-    if not ejecutar_cierre and parametros.trailing_activado:
-        ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_trailing_stop(parametros.maximo_rendimiento_alcanzado, parametros.rendimiento_actual
-    )
-
     if not ejecutar_cierre:
         beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
         
         ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_take_profit(beneficio_neto)
         
-        if not ejecutar_cierre:
-            ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_rsi_inminente(beneficio_neto)
-            
-            if not ejecutar_cierre:
-                ejecutar_cierre, operacion_ganada, motivo_cierre = cierre_retroceso_macd_inminente(beneficio_neto)
-
     return ejecutar_cierre, operacion_ganada, motivo_cierre
 
 def ejecutar_cierre(driver, motivo_cierre):
@@ -61,44 +51,25 @@ def ejecutar_cierre(driver, motivo_cierre):
         parametros.error += traceback.format_exc() + "\n"
 
 def cierre_stop_loss(rendimiento_actual):
-    if not parametros.USAR_IA or parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
-        if rendimiento_actual <= parametros.STOP_LOSS:
-            motivo_cierre = f"Stop Loss: {rendimiento_actual:+.2f}%"
-            operacion_ganada = False
-
-            return True, operacion_ganada, motivo_cierre
-    elif parametros.USAR_IA:
-        beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
-        
-        if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
-            motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {float(parametros.STOP_LOSS):.2f}"
-            operacion_ganada = False
-
-            # Cuando es IA el trailing stop ha movido el stop loss, por lo que si el beneficio neto es > 0 entonces se aseguró ganancia
-            if beneficio_neto > 0:
-                motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
-
-            return True, operacion_ganada, motivo_cierre
-        elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
-            motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {float(parametros.STOP_LOSS):.2f}"
-            operacion_ganada = False
-
-            if beneficio_neto > 0:
-                motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
-
-            return True, operacion_ganada, motivo_cierre
-
-    return False, False, "Ejecutándose"
-
-def cierre_trailing_stop(maximo_rendimiento_alcanzado, rendimiento_actual):       
-    if not parametros.USAR_IA or parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
-        caida_desde_pico = maximo_rendimiento_alcanzado - rendimiento_actual
+    beneficio_neto = float(parametros.datos_mapeados['Beneficio Neto'])
     
-        if float(caida_desde_pico) >= float(parametros.DISTANCIA_TRAILING_MAXIMA):
-            motivo_cierre = f"Trailing Stop. Rendimiento actual: {rendimiento_actual:+.2f}%. Ultimo pico de rendimiento: {caida_desde_pico:+.2f}%."
-            operacion_ganada = True
+    if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) <= float(parametros.STOP_LOSS):
+        motivo_cierre = f"Stop Loss: {parametros.valor_compra} <= {float(parametros.STOP_LOSS):.2f}"
+        operacion_ganada = False
 
-            return True, operacion_ganada, motivo_cierre
+        # Cuando es IA el trailing stop ha movido el stop loss, por lo que si el beneficio neto es > 0 entonces se aseguró ganancia
+        if beneficio_neto > 0:
+            motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
+
+        return True, operacion_ganada, motivo_cierre
+    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) >= float(parametros.STOP_LOSS):
+        motivo_cierre = f"Stop Loss: {parametros.valor_venta} >= {float(parametros.STOP_LOSS):.2f}"
+        operacion_ganada = False
+
+        if beneficio_neto > 0:
+            motivo_cierre = f"Trailing Stop. Beneficio neto {beneficio_neto:.2f}"
+
+        return True, operacion_ganada, motivo_cierre
 
     return False, False, "Ejecutándose"
 
@@ -109,52 +80,15 @@ def cierre_take_profit(beneficio_neto):
 
         return True, operacion_ganada, motivo_cierre
     
-    if parametros.USAR_IA:
-        if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
-            motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {float(parametros.TAKE_PROFIT):.2f}"
-            operacion_ganada = True
+    if parametros.datos_mapeados['Operacion'] == "Compra" and float(parametros.valor_compra) >= float(parametros.TAKE_PROFIT):
+        motivo_cierre = f"Take Profit: {parametros.valor_compra} >= {float(parametros.TAKE_PROFIT):.2f}"
+        operacion_ganada = True
 
-            return True, operacion_ganada, motivo_cierre
-        elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
-            motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {float(parametros.TAKE_PROFIT):.2f}"
-            operacion_ganada = True
+        return True, operacion_ganada, motivo_cierre
+    elif parametros.datos_mapeados['Operacion'] == "Venta" and float(parametros.valor_venta) <= float(parametros.TAKE_PROFIT):
+        motivo_cierre = f"Take Profit: {parametros.valor_venta} <= {float(parametros.TAKE_PROFIT):.2f}"
+        operacion_ganada = True
 
-            return True, operacion_ganada, motivo_cierre
+        return True, operacion_ganada, motivo_cierre
 
-    elif parametros.datos_mapeados["Criterio Apertura"] == "Criterio rápido":
-        if parametros.rendimiento_actual >= parametros.TAKE_PROFIT:
-            motivo_cierre = f"Take Profit: {parametros.rendimiento_actual}% >= {parametros.TAKE_PROFIT}%"
-            operacion_ganada = True
-            
-            return True, operacion_ganada, motivo_cierre
-
-    return False, False, "Ejecutándose"
-
-def cierre_retroceso_rsi_inminente(beneficio_neto):
-    if not parametros.USAR_IA:
-        if parametros.datos_mapeados["Operacion"] == "Venta" and beneficio_neto > 0 and float(parametros.valor_rsi) < parametros.RSI_SOBREVENTA_MACD:
-            operacion_ganada = True
-            motivo_cierre = f"Venta salió del RSI de sobreventa ({parametros.valor_rsi} < {parametros.RSI_SOBREVENTA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
-            return True, operacion_ganada, motivo_cierre
-        
-        if parametros.datos_mapeados["Operacion"] == "Compra" and beneficio_neto > 0 and float(parametros.valor_rsi) > parametros.RSI_SOBRECOMPRA_MACD:
-            operacion_ganada = True
-            motivo_cierre = f"Venta salió del RSI de sobrecompra ({parametros.valor_rsi} > {parametros.RSI_SOBRECOMPRA_MACD}) - Se espera retroceso (+${beneficio_neto:.2f})"
-            return True, operacion_ganada, motivo_cierre
-    
-    return False, False, "Ejecutándose"
-
-def cierre_retroceso_macd_inminente(beneficio_neto):
-    
-    if not parametros.USAR_IA:
-        if parametros.datos_mapeados["Operacion"] == "Venta" and beneficio_neto > 0 and float(parametros.valor_macd) > float(parametros.historico_macd[-1]):
-            operacion_ganada = True
-            motivo_cierre = f"Venta saliendo del MACD bajista: {parametros.valor_macd} > {parametros.historico_macd[-1]}- Se espera retroceso (+${beneficio_neto:.2f})"
-            return True, operacion_ganada, motivo_cierre
-        
-        if parametros.datos_mapeados["Operacion"] == "Compra" and beneficio_neto > 0 and float(parametros.valor_macd) < float(parametros.historico_macd[-1]):
-            operacion_ganada = True
-            motivo_cierre = f"Compra salió del MACD alcista {parametros.valor_rsi} < {parametros.historico_macd[-1]} - Se espera retroceso (+${beneficio_neto:.2f})"
-            return True, operacion_ganada, motivo_cierre
-    
     return False, False, "Ejecutándose"
