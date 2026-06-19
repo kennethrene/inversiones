@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 from pydantic import BaseModel, Field
 
 PROMPT_PATRONES = """
@@ -110,20 +110,19 @@ Si la posición fue gatillada bajo la regla de rango lateral, aplica esta coloca
 - tp (Proyección Realista): Se colocará a una distancia exacta de entre 1.2x VP y 1.5x VP desde tu precio de entrada original (`pe`). Queda ESTRICTAMENTE PROHIBIDO proyectar un tp mayor a 1.5x VP en estrategias tendenciales.
   Esto garantiza que el objetivo se ubique dentro del rango de expansión promedio de la sesión actual y sea alcanzable en un solo ciclo de momentum.
 
-
 8. Cálculo Dinámico de la Ventana de Auditoría (Campo `v`):
 Determina con criterio profesional cuántas velas de 5 minutos requiere la operación para desarrollarse de forma segura, asignando rígidamente un número entero entre 1 y 4 según las 
 siguientes reglas lógicas (Prohibido usar rangos o valores cero):
 - CASO A (Sin Operación - 'No Abrir'): 
   Si la clave `a` es "No Abrir", asigna estrictamente 1 vela. Esto garantiza que tu bot local despierte en la siguiente vela M5 cerrada para reevaluar el mercado desde cero.
-- CASO B (Estrategias de Rango o Alta Velocidad): 
-  Si la clave `a` es "Comprar" o "Vender" y el Tipo de estrategia es "Rango_Lateral" o "Ruptura_Momentum", asigna exactamente 2 o 3 velas. 
-  Usa 2 si la volatilidad VP es extremadamente alta (movimiento rápido) y 3 si el mercado está normal. 
-  Esto le da de 10 a 15 minutos al precio para alejarse del precio de entrada original.
-- CASO C (Estrategias de Patrones Tendenciales / Reversión): Si la clave `a` es "Comprar" o "Vender" y el Tipo de estrategia es "Tendencial_Reversion" (Martillos, Envolventes, 
-  Continuaciones), asigna exactamente 3 o 4 velas. Usa 3 si la volatilidad VP es alta y 4 si el mercado está lento.
-  Esto blinda al bot permitiéndole ignorar los pullbacks iniciales de las primeras 2 velas (10 minutos) y auditar la posición únicamente cuando el ciclo de 15 a 20 minutos 
-  haya madurado.
+- CASO B (Estrategias de Rango o Alta Velocidad): Si la clave `a` es "Comprar" o "Vender" y el Tipo de estrategia es "Rango_Lateral" o "Ruptura_Momentum", 
+  asigna tu ventana de espera `v` bajo la siguiente métrica:
+  * Asigna EXACTAMENTE 2 velas (Mercado Rápido): Si el tamaño individual (High - Low) de la Vela 0 es ≥ 2.0x VP.
+  * Asigna EXACTAMENTE 3 velas (Mercado Normal): Si RCL >= 1.2x VP Y el tamaño individual de la Vela 0 es < 2.0x VP.
+- CASO C (Estrategias de Patrones Tendenciales / Reversión): Si la clave `a` es "Comprar" o "Vender" y el Tipo de estrategia es "Tendencial_Reversion", 
+  asigna tu ventana de espera `v` bajo la siguiente métrica:
+  * Asigna EXACTAMENTE 3 velas (Mercado Rápido / Volatilidad Alta): Si el tamaño individual (High - Low) de la Vela 0 es ≥ 2.0x VP.
+  * Asigna EXACTAMENTE 4 velas (Mercado Normal / Lento): Si el tamaño individual de la Vela 0 es < 2.0x VP. Esto blinda al bot permitiéndole ignorar las fluctuaciones menores de los primeros 15 minutos.
 
 9. El campo pe (precio de entrada) debe ser exacta y estrictamente el valor de cierre (Close) de la última vela suministrada (Vela 0).
 
