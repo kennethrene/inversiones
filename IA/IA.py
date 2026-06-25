@@ -17,6 +17,7 @@ def ejecutar_operacion():
             num_velas = 61
 
         velas = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas)
+        velas_H1 = extraer_velas_para_IA(parametros.activo_actual, Interval.in_1_hour, 30)
     else:
         if len(parametros.lista_velas_acumuladas) == 0:
             num_velas = 121
@@ -28,6 +29,7 @@ def ejecutar_operacion():
 
         if not configuracion_prompt["indicadores"]:
             velas = formatear_velas_para_ia(velas)
+            velas_H1 = formatear_velas_para_ia(velas_H1)
         else:
             velas = formatear_indicadores_para_ia(velas)
 
@@ -37,7 +39,7 @@ def ejecutar_operacion():
         else:
             prompt_apertura = importlib.import_module(f"IA.prompts.apertura.{nombre_ia}.{configuracion_prompt['version_apertura']}")
             obtener_datos_filtro = getattr(prompt_apertura,"obtener_datos_filtro")
-            inputs_filtrados = obtener_datos_filtro(velas)
+            inputs_filtrados = obtener_datos_filtro(velas, velas_H1)
             prompt_plantilla = getattr(prompt_apertura, configuracion_prompt["apertura"])
             prompt = prompt_plantilla.format(**inputs_filtrados)
 

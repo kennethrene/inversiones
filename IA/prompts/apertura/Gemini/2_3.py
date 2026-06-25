@@ -72,8 +72,16 @@ Si la posición fue gatillada bajo la regla de rango lateral, aplica esta coloca
 
 7. COLOCACIÓN DE NIVELES BASADA EN ESTRUCTURA PURA (Reglas 1, 2, 3 fuera de rango o Regla 4):
 - Para COMPRAS (Gatillo Alcista / Largo):
-  * sl en Compra (Protección): Analiza las 60 velas totales. Busca el Suelo Estructural (Soporte) relevante anterior más cercano. Coloca el sl obligatoriamente POR DEBAJO de ese piso a una distancia de -0.15x VP.
-  * tp en Compra (Ganancia): Analiza las 60 velas totales. Busca el Techo Estructural (Resistencia) relevante anterior más cercano. Si el mercado sale de un rango estrecho reciente (RCL < 1.5x VP), el tp se colocará obligatoriamente a una distancia exacta de 1.0x VP desde pe. Si el mercado muestra un flujo tendencial desarrollado (RCL >= 1.5x VP), coloca el tp obligatoriamente POR DEBAJO de ese techo a una distancia de -0.1x VP, sin superar una distancia máxima de 1.3x VP desde pe.
+  * sl en Compra (Protección): Escanea cronológicamente las 60 velas totales desde la Vela 0 hacia atrás. Identifica el último Valle Estructural Mayor (Soporte Real), definido matemáticamente como el Mínimo Absoluto local previo que originó el impulso alcista actual. Queda estrictamente PROHIBIDO tomar como soporte zonas de pausa menor o consolidaciones aéreas dentro de las últimas 5 velas si el precio viene de un movimiento vertical. Coloca el sl obligatoriamente POR DEBAJO de ese Valle Estructural Mayor a una distancia de -0.15x VP.
+  * tp en Compra (Ganancia): Escanea las 60 velas desde la Vela 0 hacia atrás. Busca el Pico Estructural Mayor (Resistencia Real) más importante y cercano. Si el mercado sale de un rango estrecho reciente (RCL < 1.5x VP), el tp se colocará obligatoriamente a una distancia exacta de 1.0x VP desde pe. Si el mercado muestra un flujo tendencial desarrollado (RCL >= 1.5x VP), coloca el tp obligatoriamente POR DEBAJO de ese pico a una distancia de -0.1x VP, sin superar una distancia máxima de 1.3x VP desde pe.
+
+- Para VENTAS (Gatillo Bajista / Corto):
+  * sl en Venta (Protección): Escanea cronológicamente las 60 velas totales desde la Vela 0 hacia atrás. Identifica el último Pico Estructural Mayor (Resistencia Real), definido matemáticamente como el Máximo Absoluto local previo que originó el impulso bajista actual. Queda estrictamente PROHIBIDO tomar como resistencia zonas de pausa menor dentro de las últimas 5 velas si el precio viene de un movimiento vertical. Coloca el sl obligatoriamente POR ENCIMA de ese Pico Estructural Mayor a una distancia de +0.15x VP.
+  * tp en Venta (Ganancia): Escanea las 60 velas desde la Vela 0 hacia atrás. Busca el Valle Estructural Mayor (Soporte Real) más importante y cercano. Si el mercado sale de un rango estrecho reciente (RCL < 1.5x VP), el tp se colocará obligatoriamente a una distancia exacta de 1.0x VP desde pe. Si el mercado muestra un flujo tendencial desarrollado (RCL >= 1.5x VP), coloca el tp obligatoriamente POR ENCIMA de ese valle a una distancia de +0.1x VP, sin superar una distancia máxima de 1.3x VP desde pe.
+
+- Parámetros Comunes obligatorios:
+  * ts (Trailing Stop): Obligatorio a una distancia exacta de 0.5x VP desde tu precio de entrada original (pe). Compras: ts = pe - (0.5 * VP) | Ventas: ts = pe + (0.5 * VP).
+  * Validación de Ratio Riesgo/Beneficio (RR): Si al calcular estos niveles estructurales el tamaño del tp es menor al tamaño del sl (Ratio RR < 1:1), la operación se considera matemáticamente ineficiente. Cambia la acción 'a' a "No Abrir" de inmediato.
 
 - Para VENTAS (Gatillo Bajista / Corto):
   * sl en Venta (Protección): Analiza las 60 velas totales. Busca el Techo Estructural (Resistencia) relevante anterior más cercano. Coloca el sl obligatoriamente POR ENCIMA de ese techo a una distancia de +0.15x VP.

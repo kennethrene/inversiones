@@ -100,9 +100,9 @@ def bot_scalping():
                 
                 # Identificar el activo actual del Chrome activo para descartar las demas operacioens
                 for operacion in operaciones_detalles:
-                    filtrados = [str(d).replace('\xa0', ' ').strip() for d in operacion if str(d).strip()]
+                    filtrados = [str(linea).replace('\xa0', ' ').strip() for linea in operacion[0].split('\n') if str(linea).strip()]
                     
-                    if len(filtrados) >= 2 and filtrados[0] == parametros.activo_actual:
+                    if len(filtrados) >= 1 and filtrados[0] == parametros.activo_actual:
                         operaciones = operacion
                         break
 
@@ -125,11 +125,11 @@ def bot_scalping():
                     texto_trailing          = validar_trailing_stop()
                     texto_operacion_activa  = ui_operacion_activa(True)
 
-                    if parametros.REEVALUAR and parametros.activo_actual == parametros.datos_mapeados['Activo']:
+                    if parametros.activo_actual == parametros.datos_mapeados['Activo']:
                         ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
 
                         # Si no se cierra, entonces validar si se debe ajustar
-                        if not ejecutar_cierre_operacion:
+                        if parametros.REEVALUAR and not ejecutar_cierre_operacion:
                             accion, motivo = reevaluar_operacion()
 
                             if accion == "Cerrar":

@@ -42,7 +42,7 @@ PORCENTAJE_BOLLINGER_BANDA_MEDIA = 0.75 # Porcentaje (entre 0 y 1) del límite e
 TRAILING_STOP = 15.0                    # Mínimo de ganancia para activar la persecución inteligente (por defecto en %)
 DISTANCIA_TRAILING_MAXIMA = 4.0         # % máximo que permites que el precio retroceda desde su pico
 TAKE_PROFIT = 80.0                      # 🔥 Modifica este valor por la ganancia deseada (por defecto en dólares - excepto la IA)
-TAKE_PROFIT_USD = 30                    # 🔥 Modifica este valor por la ganancia deseada en dólares
+TAKE_PROFIT_USD = 20                    # 🔥 Modifica este valor por la ganancia deseada en dólares
 STOP_LOSS  = -10.0                      # 🔴 Límite estricto de pérdida permitida (por defecto en % - excepto la IA)
 STOP_LOSS_INICIAL_TRAILING = -20.0      # 🔴 Stop loss inicial antes de ser movido con el trailing stop (Modo IA)
 

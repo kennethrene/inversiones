@@ -17,7 +17,11 @@ def extraer_datos_operacion(lista_cruda):
     if len(lista_cruda) > 0 and isinstance(lista_cruda[0], list):
         lista_cruda = lista_cruda[0]
 
-    filtrados = [str(d).replace('\xa0', ' ').strip() for d in lista_cruda if str(d).strip()]
+    filtrados = [
+        str(elemento).replace('\xa0', ' ').strip() 
+        for elemento in lista_cruda[0].split('\n') 
+        if str(elemento).strip()
+    ]
    
     if len(filtrados) >= 2:
         parametros.datos_mapeados["Activo"] = filtrados[0]  # Cambiado para tomar solo 'US30'
@@ -50,26 +54,35 @@ def extraer_datos_operacion(lista_cruda):
 
 def obtener_datos_operaciones():
     return """
+    return (() => {
         let botonesValidos = [];
         let botones = new Map();
         let todosLosBotones = document.querySelectorAll("button[data-testid='close-button']");
         
         todosLosBotones.forEach(btn => {
-            if (btn.offsetWidth > 0 || btn.offsetHeight > 0) { botonesValidos.push(btn); }
+            if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) { 
+                botonesValidos.push(btn); 
+            }
         });
         
         if (botonesValidos.length === 0) {
             let elementosGlobales = document.querySelectorAll("*");
             elementosGlobales.forEach(el => {
-                if (el.shadowRoot) {
+                if (el && el.shadowRoot) {
                     let btnShadow = el.shadowRoot.querySelectorAll("button[data-testid='close-button']");
                     if (btnShadow.length > 0) {
                         btnShadow.forEach(btn => {
-                            if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0) &&
-                                btn.closest(".header-info").querySelector("[data-testid='instrument-name'] .pds-element-name-value__element-name") != null) {
-                                botonesValidos.push(btn);
-                                activo = btn.closest(".header-info").querySelector("[data-testid='instrument-name'] .pds-element-name-value__element-name").innerText.trim();
-                                botones.set(activo, btn);
+                            if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) {
+                                let headerInfo = btn.closest(".header-info");
+                                // Validación crítica: Evita el error 'querySelector' of null
+                                if (headerInfo) {
+                                    let instrumentNameElement = headerInfo.querySelector("[data-testid='instrument-name'] .pds-element-name-value__element-name");
+                                    if (instrumentNameElement != null) {
+                                        botonesValidos.push(btn);
+                                        let activo = instrumentNameElement.innerText.trim();
+                                        botones.set(activo, btn);
+                                    }
+                                }
                             }
                         });
                     }
@@ -79,16 +92,23 @@ def obtener_datos_operaciones():
         
         let datosOperaciones = [];
         botonesValidos.forEach(btn => {
-            let fila = btn.closest("tr") || btn.closest("[role='row']") || btn.parentElement.parentElement;
+            let fila = btn.closest("tr") || btn.closest("[role='row']") || (btn.parentElement ? btn.parentElement.parentElement : null);
             if (fila) {
-                let textos = fila.innerText.split('\\n').map(t => t.trim()).filter(t => t.length > 0);
+                // Doble escape \\\\n para que Python no rompa el salto de línea de JavaScript
+                let textos = fila.innerText.split('\\\\n').map(t => t.trim()).filter(t => t.length > 0);
                 datosOperaciones.push(textos);
             }
         });
         
-        if (botonesValidos.length > 0) { window.ultimoBotonCierre = botonesValidos[0]; window.botonesCerrar = botonesValidos; window.botonesCerrar = botones;}
+        if (botonesValidos.length > 0) { 
+            window.ultimoBotonCierre = botonesValidos[0]; 
+            window.botonesCerrarLista = botonesValidos; 
+            window.botonesCerrarMapa = botones;
+        }
+        
         return { "total": botonesValidos.length, "detalles": datosOperaciones };
-        """
+    })();
+    """
 
 # ===========================================================================
 # ESCANEO CON PERFORADOR SHADOW DOM Y GESTIÓN DE MATRICES
