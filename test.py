@@ -16,7 +16,7 @@ parametros.datos_mapeados['Beneficio Neto'] = -6.97
 
 configuracion.explicacion_decision = "VP=2.58 | RCL=6.27 | BCA=1 | Filtro=Lateral_Consolidacion | Tipo=Rango_Lateral"
 
-apertura = False
+apertura = True
 
 if apertura:
     resultado = IA.ejecutar_operacion()

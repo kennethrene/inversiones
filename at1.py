@@ -125,7 +125,7 @@ def bot_scalping():
                     texto_trailing          = validar_trailing_stop()
                     texto_operacion_activa  = ui_operacion_activa(True)
 
-                    if parametros.activo_actual == parametros.datos_mapeados['Activo']:
+                    if parametros.REEVALUAR and parametros.activo_actual == parametros.datos_mapeados['Activo']:
                         ejecutar_cierre_operacion, _, motivo_cierre = operacion_debe_cerrar()
 
                         # Si no se cierra, entonces validar si se debe ajustar

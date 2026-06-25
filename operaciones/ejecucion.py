@@ -108,7 +108,7 @@ def reevaluar_operacion():
 
             if accion != "Mantener":
                 if accion == "Cerrar":
-                    return "Cerrar", f"IA recomienda cerrar: {explicacion}"
+                    return "Cerrar", f"IA recomienda cerrar: {explicacion} - Hora log: {datetime.now().strftime('%H:%M')}"
                 
                 # Ajustar operación actual
                 # Ajustar valores de TradingView a los valores de XTB
@@ -133,7 +133,7 @@ def reevaluar_operacion():
                 parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
                 configuracion.explicacion_decision = explicacion
                 guardar_estadistica("Ajuste")
-                return accion, f"ℹ️  IA recomienda ajustar: {explicacion}"
+                return accion, f"ℹ️  IA recomienda ajustar: {explicacion} - Hora log: {datetime.now().strftime('%H:%M')}"
             else:
                 hora_proxima_validacion = datetime.now() + timedelta(minutes=int(parametros.velas_espera) * 5)
                 
@@ -144,7 +144,7 @@ def reevaluar_operacion():
                     f"      Hora log            : {datetime.now().strftime('%H:%M')}"
                 )
         else:
-            parametros.error += "No se ejecutó la IA\n"
+            parametros.error += f"No se ejecutó la IA -  Hora log: {datetime.now().strftime('%H:%M')}\n"
     
     return "", ""
 

@@ -4,7 +4,7 @@ TIPO_PROMPT = {
     "Patrones": {
         "activo": True,
         "apertura": "PROMPT_PATRONES",
-        "version_apertura": "2_0",
+        "version_apertura": "2_3",
         "version_apertura_cache": "2_0",
         "reevaluacion": "PROMPT_PATRONES_REEVALUACION",
         "version_reevaluacion": "2_0",
