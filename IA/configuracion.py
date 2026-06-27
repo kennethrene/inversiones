@@ -2,24 +2,26 @@ HORAS_CACHE = 2
 
 TIPO_PROMPT = {
     "Patrones": {
-        "activo": True,
+        "activo": False,
         "apertura": "PROMPT_PATRONES",
         "version_apertura": "2_4",
         "version_apertura_cache": "2_0",
         "reevaluacion": "PROMPT_PATRONES_REEVALUACION",
         "version_reevaluacion": "2_0",
         "version_reevaluacion_cache": "2_0",
-        "indicadores": False
+        "indicadores": False,
+        "indicador": ""
     },
     "Híbrido": {
-        "activo": False,
+        "activo": True,
         "apertura": "PROMPT_HIBRIDO",
-        "version_apertura": "1_0i",
+        "version_apertura": "2_4i",
         "version_apertura_cache": "1_0i",
         "reevaluacion": "PROMPT_HIBRIDO_REEVALUACION",
         "version_reevaluacion": "1_0i",
         "version_reevaluacion_cache": "1_0i",
-        "indicadores": True
+        "indicadores": True,
+        "indicador": "Bollinger"
     }
 }
 

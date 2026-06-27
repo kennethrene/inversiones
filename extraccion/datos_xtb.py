@@ -1,7 +1,6 @@
 import re
 import pandas as pd
 from selenium.webdriver.common.by import By
-from extraccion.velas import extraer_velas
 import configuracion.parametros as parametros
 from ui.grafico import extraer_datos_velas
 
@@ -96,14 +95,13 @@ def obtener_datos_operaciones():
             if (fila) {
                 // Doble escape \\\\n para que Python no rompa el salto de línea de JavaScript
                 let textos = fila.innerText.split('\\\\n').map(t => t.trim()).filter(t => t.length > 0);
-                datosOperaciones.push(textos);
+                datosOperaciones.push(textos); 
             }
         });
-        
+
         if (botonesValidos.length > 0) { 
-            window.ultimoBotonCierre = botonesValidos[0]; 
-            window.botonesCerrarLista = botonesValidos; 
-            window.botonesCerrarMapa = botones;
+            window.ultimoBotonCierre = botonesValidos[0];
+            window.botonesCerrar = botones;
         }
         
         return { "total": botonesValidos.length, "detalles": datosOperaciones };

@@ -1,7 +1,8 @@
 import pandas as pd
 
 MOSTRAR_GRAFICO = False
-DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
+DEBUG = True # En True no realiza ninguna operación ... solo se conecta y muestra valores
+DEBUG_QUITAR_VELAS = 19 # En modo debug, puedo simular comportamientos quitando estas X velas de la matriz de respuesa
 PORT = 9222
 # ============================================================================
 # Preload de valores iniciales para no esperar que pase el tiempo y tener info
@@ -21,7 +22,7 @@ PRELOAD_OPERACION = 'Venta'
 PRELOAD_PRECIO_APERTURA = 4322.88
 PRELOAD_TAKE_PROFIT = 4313.72
 PRELOAD_STOP_LOSS = 4330
-PRELOAD_TRAILING_STOP = 4318.24
+PRELOAD_TRAILING_STOP = 4318.24 
 PRELOAD_DIFERENCIA_PRECIO= 50
 PRELOAD_PATRON = 'Tendencia Alcista Continuada'
 PRELOAD_BENEFICIO_NETO = -1.0
@@ -61,26 +62,13 @@ TIEMPO_ULTIMO_CIERRE = 0.0    # Rastreo del timestamp del último cierre
 # CONFIGURACION DE ESTRATEGIAS HABILITADAS MANUALES
 # ============================================================================
 REEVALUAR = False
-CRITERIO6 = False # Extremo
-CRITERIO7 = True # IA
 
-CRITERIO_INDICADORES = [
-    {},
-    {
-        # 6
-        "MACD": False,
-        "RSI": False,
-        "BOLLINGER": False,
-        "EMA": False
-    },
-    {
-        # 7
-        "MACD": False,
-        "RSI": False,
-        "BOLLINGER": False,
-        "EMA": False
-    }
-]
+CRITERIO_INDICADORES = {
+    "MACD": False,
+    "RSI": False,
+    "BOLLINGER": True,
+    "EMA": False
+}
 
 datos_graficos = {
     "hora_vela": None,

@@ -40,11 +40,6 @@ def ejecutar_cierre(driver, motivo_cierre):
                 actualizar_ultima_operacion(parametros.datos_mapeados, "Perdida", motivo_cierre)
                 actualizar_estadisticas_cierre(False)
             
-            parametros.maximo_rendimiento_alcanzado = 0.0
-            parametros.TRAILING_STOP = 15.0
-            parametros.DISTANCIA_TRAILING_MAXIMA = 4.0
-            parametros.TAKE_PROFIT = 3.5
-            parametros.STOP_LOSS  = -7.5
             parametros.trailing_activado = False
 
             time.sleep(2)

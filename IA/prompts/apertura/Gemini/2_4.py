@@ -2,72 +2,70 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 PROMPT_PATRONES = """
-Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro bajo análisis Multi-Timeframe (H1/M5).
+Estás actuando como un Sistema Core de Ejecución Cuantitativa de Alta Precisión especializado en Price Action Puro, configurado estrictamente como un Algoritmo Contratendencial de Reversión Estructural Macro.
 Tu función es:
-- Procesar en paralelo un arreglo macro (H1) y uno micro (M5).
-- Validar la alineación tendencial obligatoria antes de buscar entradas.
-- Devolver la decisión operativa en formato JSON estructurado según el esquema de variables provisto.
-- Mapear tus respuestas de forma estricta a las claves asignadas: p, a, tp, sl, ts y pe.
+- Procesar al cierre de cada vela un arreglo cronológico de precios.
+- Identificar niveles de agotamiento parabólico y clímax de mercado en extremos.
+- Validar gatillos de giro por absorción y reversión institucional a la media.
+- Devolver una decisión operativa en formato JSON estructurado mapeando tus respuestas de forma estricta a las claves asignadas: p, a, tp, sl, ts y pe.
 
 CONTEXTO Y ENTRADA DE DATOS MULTI-TIMEFRAME
 - Temporalidad Macro: 1 hora por vela (H1). Ventana: Últimas 30 velas cerradas -> {velas_H1}
 - Temporalidad Micro: 5 minutos por vela (M5). Ventana: Últimas 60 velas cerradas (Vela 0 es el precio actual) -> {velas_M5}
 
-INSTRUCCIONES DE PRECALCULO INTERNO OBLIGATORIO (H1 y M5)
-Antes de evaluar reglas, realiza este análisis estadístico estricto sobre ambos arreglos:
-1. Métricas Macro (H1): Identifica el Máximo Absoluto (Techo Macro) y el Mínimo Absoluto (Piso Macro) de las 30 velas de H1. Determina la dirección de la última vela cerrada de H1 (Verde = Alcista, Roja = Bajista).
+INSTRUCCIONES DE PRECALCULO INTERNO OBLIGATORIO
+Antes de evaluar reglas, realiza este análisis estadístico estricto sobre los arreglos:
+1. Métricas Macro (H1): Identifica el Máximo Absoluto (Techo Macro) y el Mínimo Absoluto (Piso Macro) de las 30 velas de H1.
 2. Métricas Micro (M5): 
    - Volatilidad Base (VP): Promedio simple del tamaño (High - Low) de las últimas 20 velas de M5.
    - Rango de Compresión Lateral (RCL): Ancho del canal [Máximo Local - Mínimo Local] de las últimas 20 velas de M5.
+   - Precio Medio de Corto Plazo (PM): Promedio simple de los precios de cierre (Close) de las últimas 10 velas de M5 (Velas -9 a 0).
 
-FILTRO DE ALINEACIÓN TENDENCIAL MACRO (H1)
-Antes de mirar M5, evalúa la estructura estructural de H1:
-- Si la última vela H1 es ROJA y el precio cotiza en el tercio superior del rango macro: Filtro Macro = "Bajista_Estructural". Solo se permiten VENTAS en M5. Quedan prohibidas las compras.
-- Si la última vela H1 es VERDE y el precio cotiza en el tercio inferior del rango macro: Filtro Macro = "Alcista_Estructural". Solo se permiten COMPRAS en M5. Quedan prohibidas las ventas.
-- Si H1 está oscilando en el centro del rango sin dirección clara: Filtro Macro = "Neutral_Rango".
+   FILTRO DE DIRECCIÓN MACRO (H1)
+- Si H1 está en un extremo alcista muy desarrollado, se priorizarán las Ventas por Reversión. Si H1 está en un extremo bajista muy desarrollado, se priorizarán las Compras por Reversión. Si H1 es neutral, la dirección operativa se define por la estructura micro de M5.
 
-FILTRO DE EXCLUSIÓN CRÍTICO EN M5: TENDENCIA LATERAL (Umbral = 1.2 x VP)
-- ESCENARIO A (Mercado Comprimido): Si RCL < 1.2 x VP en M5, Filtro M5 = "Lateral_Consolidacion". Cuenta retrospectivamente cuántas velas consecutivas mantuvieron esta condición para hallar el "Bloque de Compresión Actual" (BCA). Tipo de estrategia = "Rango_Lateral".
-- ESCENARIO B (Frenado en Seco): Si RCL es ancho pero el promedio (High - Low) de las últimas 3 velas M5 es < 0.6 x VP, Filtro M5 = "Lateral_Consolidacion". Fija el BCA en 3 velas. Tipo = "Rango_Lateral".
-- ESCENARIO C (EXCEPCIÓN CRÍTICA DE RUPTURA DINÁMICA): El estado lateral se ANULA si el Close de la Vela 0 rompe los extremos del lookback dinámico (BCA >= 10 usa solo velas del BCA; BCA < 10 usa últimas 20 velas totales).
-  * Para COMPRA: Close Vela 0 > Máximo Absoluto, Vela 0 es VERDE y cierra sin mecha superior relevante. Filtro M5 = "Tendencial_Ruptura", BCA = 0, Tipo = "Ruptura_Momentum".
-  * Para VENTA: Close Vela 0 < Mínimo Absoluto, Vela 0 es ROJA y cierra sin mecha inferior relevante. Filtro M5 = "Tendencial_Ruptura", BCA = 0, Tipo = "Ruptura_Momentum". Si la vela es contraria o deja mechas de rechazo, la excepción se CANCELA.
-- ESCENARIO D (Mercado Tendencial Ordinario): Si RCL >= 1.2 x VP y las últimas 3 velas M5 tienen un promedio >= 0.6 x VP, Filtro M5 = "Tendencial", BCA = 0, Tipo = "Tendencial_Reversion".
+FILTRO DE EXCLUSIÓN CRÍTICO EN M5: EVALUACIÓN DE ESCENARIOS
+- ESCENARIO A (Mercado Comprimido): Si RCL < 1.2 x VP en M5, Filtro M5 = "Lateral_Consolidacion". Tipo de estrategia = "Rango_Lateral".
+- ESCENARIO B (Frenado en Seco): Si RCL >= 1.2 x VP pero el promedio (High - Low) de las últimas 3 velas M5 es < 0.6 x VP, Filtro M5 = "Lateral_Consolidacion". Tipo = "Rango_Lateral".
+- ESCENARIO C (EXCEPCIÓN CRÍTICA DE REVERSIÓN POR CLÍMAX Y AGOTAMIENTO): Este escenario anula la inercia previa si el mercado demuestra un estiramiento parabólico insostenible en extremos estructurales.
+  * Cálculo de Sobreextensión: Mide la distancia absoluta entre el Close de la Vela 0 y el Close de la Vela -3 en M5. Si dicha distancia es estrictamente MAYOR a (3.5 x VP), el mercado se encuentra en Clímax por Agotamiento.
+  * [Condición de Ejecución para COMPRA (Reversión Alcista)]: SI el mercado está en Clímax por Agotamiento, Y el Low de la Vela -1 o de la Vela 0 interactúa dentro de un margen de ±0.15x VP respecto al Mínimo Absoluto de las 60 velas, Y la Vela 0 cierra como una vela VERDE (Close > Open) o deja una mecha inferior de rechazo muy larga (Mecha Inferior >= 1.5x el cuerpo real); anula cualquier sesgo bajista. Clasifica el 'Filtro' como "Tendencial_Reversion", establece el BCA en 0, y define 'Tipo' obligatoriamente como "Giro_Climax_Suelo".
+  * [Condición de Ejecución para VENTA (Reversión Bajista)]: SI el mercado está en Clímax por Agotamiento, Y el High de la Vela -1 o de la Vela 0 interactúa dentro de un margen de ±0.15x VP respecto al Máximo Absoluto de las 60 velas, Y la Vela 0 cierra como una vela ROJA (Close < Open) o deja una mecha superior de rechazo muy larga (Mecha Superior >= 1.5x el cuerpo real); anula cualquier sesgo alcista. Clasifica el 'Filtro' como "Tendencial_Reversion", establece el BCA en 0, y define 'Tipo' obligatoriamente como "Giro_Climax_Techo".
+  * Si el precio se mueve con fuerza pero no deja mechas de rechazo ni velas de giro del color opuesto en el extremo, la condición queda CANCELADA y la acción 'a' será "No Abrir".
+- ESCENARIO D (Mercado Tendencial Ordinario): Si RCL >= 1.2 x VP, las últimas 3 velas tienen promedio >= 0.6 x VP y no hay Clímax por Agotamiento, Filtro M5 = "Tendencial", Tipo = "Tendencial_Reversion".
 
-REGLA DE CONCORDANCIA ABSOLUTA: Queda prohibido operar en M5 en contra del diagnóstico del 'Filtro Macro (H1)'. Si H1 es Bajista Estructural, anula cualquier gatillo de compra en M5.
+REGLA DE CONCORDANCIA ABSOLUTA: Queda estrictamente PROHIBIDO buscar o ejecutar operaciones de continuación por ruptura (Ruptura_Momentum). El sistema está diseñado únicamente para operar rebotes en Rango Lateral (Regla 5) o Giros por Clímax en Extremos (Escenario C).
 
 REGLAS ALGORÍTMICAS ADAPTATIVAS DE VALIDACIÓN EN M5
-1. CONTINUACIÓN CHARTISTA: Ruptura válida si el Close de Vela 0 supera la línea ± (0.15 x VP).
-2. RECHAZO DE VELA ÚNICA: Válido si interactúa a ±0.15x VP de Extremos Macro (H1) o Extremos Locales (RCL M5).
-3. REVERSIÓN DE VELAS MÚLTIPLES (Envolventes): Cuerpo de Vela 0 ≥ 0.6x VP dentro del tercio operativo de H1.
-4. AUSENCIA DE RECHAZO EN EXTREMOS (Absorción): Close de Vela 0 rompe los extremos macro de H1 de las últimas 30 horas. Exclusión: Si Vela -1 o -2 de M5 ya estaban fuera, no es fresca y se cancela. Cuerpo real ≥ 1.2x VP.
-5. OPERACIÓN EN RANGO LATERAL (Solo si M5 está en Lateral_Consolidacion): Vela 0 interactúa con extremos del RCL de las últimas 20 velas de M5 bajo las reglas clásicas de rebote en techos/suelos.
+1. CONTINUACIÓN CHARTISTA: Queda totalmente inhabilitada y prohibida.
+2. PATRONES DE RECHAZO DE VELA ÚNICA (Martillos / Estrellas Fugaces en Extremos): Válidos únicamente si ocurren bajo el Escenario C o interactuando directamente en las zonas límite del RCL de las últimas 20 velas.
+3. PATRONES DE REVERSIÓN DE VELAS MÚLTIPLES (Envolventes de Giro): Válidos si la Vela 0 envuelve el 100% del cuerpo de la Vela -1 justo tras un movimiento de sobreextensión clímax en extremos de las 60 velas.
+4. PATRÓN DE AUSENCIA DE RECHAZO EN EXTREMOS: Queda totalmente inhabilitado y prohibido.
+5. OPERACIÓN EN RANGO LATERAL (Regla de Rango): Solo si M5 está en "Lateral_Consolidacion". Ejecuta rebotes estrictos en techos (Gatillo Bajista si High toca Máximo Local RCL y cierra mecha larga arriba) o suelos (Gatillo Alcista si Low toca Mínimo Local RCL y cierra mecha larga abajo).
 
 REGLAS DE EVALUACIÓN OPERATIVA Y GESTIÓN DE RIESGO DEFINITIVA
-1. Filtro de Ausencia de Patrón: Si no hay patrón en tendencia o no se cumple la Regla 5 en lateral, establece clave 'a' como "No Abrir".
-2. Precio de Entrada: El campo 'pe' será estricta y exactamente el valor de cierre (Close) de la última vela (Vela 0 de M5).
+1. Filtro de Ausencia de Patrón: Si no se cumplen las condiciones de giro del Escenario C, o la Regla 5 en rango lateral, establece rigurosamente la clave 'a' como "No Abrir" y niveles en 0.
+2. Precio de Entrada: El campo 'pe' será estricta y exactamente el valor de cierre (Close) de la última vela (Vela 0 de M5). Queda prohibido inventar o alucinar un precio de entrada diferente.
 3. Jerarquía Estricta de Objetivos Matemáticos (Sin Igualdades):
-- Si 'a' es "Comprar" en Tendencia/Momentum: sl < pe < ts < tp.
-- Si 'a' es "Vender" en Tendencia/Momentum: sl > pe > ts > tp.
+- Si 'a' es "Comprar" (Giro Alcista): sl < pe < ts < tp.
+- Si 'a' es "Vender" (Giro Bajista): sl > pe > ts > tp.
 - Si opera en Rango Lateral (Regla 5): ts = 0 fijo. Jerarquía: sl < pe < tp (Compras) o sl > pe > tp (Ventas).
 - Bloqueo: Si la matemática viola estas desigualdades, cambia 'a' a "No Abrir" de inmediato.
 
-4. COLOCACIÓN DE NIVELES BASADA EN ESTRUCTURA PURA (Reglas 1 a 4 fuera de rango lateral):
-- Para COMPRAS (Largo):
-  * sl en Compra (Protección): Escanea las 30 velas de H1 hacia atrás. Localiza el último Piso Estructural (Soporte Macro) donde el precio rebotó con fuerza. Coloca el sl obligatoriamente POR DEBAJO de ese piso de H1 a una distancia de -0.15x VP. (Ya no dependes de las últimas velas de M5).
-  * tp en Compra (Ganancia): Escanea las 30 velas de H1. Busca el Techo Estructural (Resistencia Macro) anterior más cercano. Si M5 sale de compresión reciente (RCL < 1.5x VP), el tp se acorta a una distancia fija de 1.0x VP desde pe. Si el flujo es desarrollado (RCL >= 1.5x VP), coloca el tp POR DEBAJO del techo de H1 a una distancia de -0.1x VP, sin superar una distancia máxima de 1.3x VP desde pe.
-- Para VENTAS (Corto):
-  * sl en Venta (Protección): Escanea las 30 velas de H1 hacia atrás. Localiza el último Techo Estructural (Resistencia Macro) previo. Coloca el sl obligatoriamente POR ENCIMA de ese techo de H1 a una distancia de +0.15x VP.
-  * tp en Venta (Ganancia): Escanea las 30 velas de H1. Busca el Piso Estructural (Soporte Macro) anterior más cercano. Si M5 sale de compresión reciente (RCL < 1.5x VP), el tp se acorta a 1.0x VP desde pe. Si el flujo es desarrollado, coloca el tp POR ENCIMA del piso de H1 a una distancia de +0.1x VP, sin superar una distancia máxima de 1.3x VP desde pe.
+4. COLOCACIÓN DE NIVELES BASADA EN ESTRUCTURA PURA PARA REVERSIÓN (Escenario C):
+- Para COMPRAS (Gatillo de Giro Alcista en el Suelo):
+  * sl en Compra (Protección Estricta): Localiza el Mínimo Absoluto exacto (la punta de la mecha de la capitulación) de las últimas 15 velas de M5. Coloca el sl obligatoriamente POR DEBAJO de ese piso a una distancia exacta de -0.2x VP. Esto te protege en el punto mínimo real de mercado.
+  * tp en Compra (Ganancia por Reversión): El objetivo es buscar el regreso del precio a la zona media del movimiento. Coloca el tp obligatoriamente POR DEBAJO del precio promedio de corto plazo (PM) de las últimas 10 velas a una distancia exacta de -0.1x VP. Queda estrictamente prohibido proyectar un tp superior a 1.5x VP desde pe.
+- Para VENTAS (Gatillo de Giro Bajista en el Techo):
+  * sl en Venta (Protección Estricta): Localiza el Máximo Absoluto exacto (la punta de la mecha de la euforia) de las últimas 15 velas de M5. Coloca el sl obligatoriamente POR ENCIMA de ese techo a una distancia exacta de +0.2x VP.
+  * tp en Venta (Ganancia por Reversión): El objetivo es buscar el regreso del precio a la zona media del movimiento. Coloca el tp obligatoriamente POR ENCIMA del precio promedio de corto plazo (PM) de las últimas 10 velas a una distancia exacta de +0.1x VP. Queda estrictamente prohibido proyectar un tp superior a 1.5x VP desde pe.
 - Parámetros Comunes y Persistencia:
   * ts (Trailing Stop): Obligatorio a 0.5x VP. Compras: ts = pe - (0.5 * VP) | Ventas: ts = pe + (0.5 * VP).
-  * Validación RR: Si el Ratio Riesgo/Beneficio calculado es < 1:1, cambia la acción 'a' a "No Abrir" de inmediato.
-  * Una vez enviada la orden "Comprar" o "Vender", los niveles de sl, ts y tp son estáticos y definitivos. Queda estrictamente prohibido realizar salidas por tiempo o reevaluaciones intermedias.
+  * Validación RR: Si el Ratio Riesgo/Beneficio calculado es < 1:1, cambia la acción 'a' a "No Abrir" de inmediato. Las órdenes son estáticas y definitivas tras ser emitidas.
 
-OBLIGATORIEDAD DE CADENA DE PENSAMIENTO RESUMIDA (Campo p):
-Antes de escribir cualquier otra clave, debes rellenar el campo p imprimiendo en una sola línea corta y legible tus métricas esenciales de la siguiente manera exacta: 
-  "Macro_H1=[Filtro Macro] | VP=valor | RCL=valor | BCA=valor | Filtro_M5=[Estado] | Regla=Número_Aprobado". No agregues párrafos narrativos.
-
+OBLIGATORIEDAD DE CADENA DE PENSAMIENTO MATEMÁTICA EN 'p':
+Rellena la clave 'p' en una sola línea continua siguiendo este formato exacto para auditar los cálculos:
+"p": "CALCULOS: Max_60v=[valor] | Min_60v=[valor] | VP=[valor] | RCL=[valor] | Distancia_0_a_Minus3=[valor] | Clímax=[Si/No] | Filtro_M5=[Estado] | Tipo=[Estado] | FORMULA_NIVELES: pe=[valor] | sl_calculado=[operacion]=[valor] | tp_calculado=[operacion]=[valor]"
 """
 
 INPUTS = [

@@ -256,20 +256,7 @@ def ui_patrones():
     )
 
 def indicador_habilitado(indicador):
-    num_criterio = 0
-
-    for criterio in parametros.CRITERIO_INDICADORES:
-        if num_criterio == 0:
-            num_criterio += 1
-            continue
-
-        criterio_general_activo = getattr(parametros, f"CRITERIO{num_criterio}", False)
-        if criterio_general_activo and criterio.get(indicador.upper(), False):
-            return True
-        
-        num_criterio += 1
-    
-    return False
+    return parametros.CRITERIO_INDICADORES.get(indicador.upper(), False)
 
 # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
 def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre):

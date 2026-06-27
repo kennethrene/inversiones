@@ -2,7 +2,7 @@ import IA.IA as IA
 import configuracion.parametros as parametros
 import IA.configuracion as configuracion
 
-parametros.activo_actual = "US500"
+parametros.activo_actual = "GOLD"
 parametros.datos_mapeados['Operacion'] = 'Compra'
 parametros.datos_mapeados['Precio Apertura'] = "30535.29"
 parametros.historico_rsi = [10, 20]
