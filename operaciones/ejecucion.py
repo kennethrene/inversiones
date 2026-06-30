@@ -6,6 +6,7 @@ from archivos.seguimiento import guardar_estadistica
 import IA.IA as IA
 from datetime import datetime, timedelta
 import IA.configuracion as configuracion
+from IA.utils import formatear_analisis_IA
 
 def debe_ejecutar_operacion():
     now = datetime.now()
@@ -15,14 +16,14 @@ def debe_ejecutar_operacion():
 
         if resultado is not None:
             accion, take_profit, stop_loss, trailing_stop, velas_espera, valor_entrada, explicacion = resultado
+            formatear_analisis_IA(explicacion)
 
             if accion != "No Abrir":
                 # Ajustar valores de TradingView a los valores de XTB
                 diferencia_take_profit = abs(float(valor_entrada) - float(take_profit))
                 diferencia_trailing_stop = abs(float(valor_entrada) - float(trailing_stop))
                 diferencia_stop_loss = abs(float(valor_entrada) - float(stop_loss))
-                parametros.velas_espera = velas_espera
-                configuracion.explicacion_decision = explicacion
+                parametros.velas_espera = velas_espera                
 
                 if accion == "Comprar":
                     parametros.diferencia_precio = abs(float(parametros.valor_compra) - float(valor_entrada))
@@ -41,10 +42,12 @@ def debe_ejecutar_operacion():
                         f"ℹ️  IA recomienda {accion}\n"
                         f"      Take profit         : {take_profit_ajustado:.2f}\n"
                         f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
-                        f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
-                        f"      Explicación         : {explicacion}\n"
+                        f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"                        
                         f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                        f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                        f"      Hora log            : {datetime.now().strftime('%H:%M')}\n\n"
+                        f"      Explicación\n"
+                        f"      ───────────────────────────────────\n"
+                        f" {configuracion.explicacion_decision}"
                 )
                 parametros.TAKE_PROFIT = take_profit_ajustado
                 parametros.STOP_LOSS = stop_loss_ajustado
@@ -55,8 +58,10 @@ def debe_ejecutar_operacion():
             else:
                 parametros.log_operacion = (
                     f"ℹ️  IA recomienda {accion}\n"
-                    f"      Explicación         : {explicacion}\n"
-                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    f"      Hora log            : {datetime.now().strftime('%H:%M')}\n"
+                    f"      Explicación\n"
+                    f"      ───────────────────────────────────\n"
+                    f" {configuracion.explicacion_decision}"
                 )
         else:
             parametros.error += "No se ejecutó la IA\n"
@@ -105,6 +110,7 @@ def reevaluar_operacion():
         if resultado is not None:
             accion, take_profit, stop_loss, trailing_stop, velas_espera, explicacion = resultado
             parametros.velas_espera = velas_espera
+            formatear_analisis_IA(explicacion)
 
             if accion != "Mantener":
                 if accion == "Cerrar":
@@ -122,16 +128,17 @@ def reevaluar_operacion():
                     f"      Take profit         : {take_profit_ajustado:.2f}\n"
                     f"      Stop loss           : {stop_loss_ajustado:.2f}\n"
                     f"      Trailing Stop       : {trailing_stop_ajustado:.2f}\n"
-                    f"      Explicación         : {explicacion}\n"
                     f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    f"      Hora log            : {datetime.now().strftime('%H:%M')}\n\n"
+                    f"      Explicación\n"
+                    f"      ───────────────────────────────────\n"
+                    f" {configuracion.explicacion_decision}"
                 )
                 parametros.TAKE_PROFIT = take_profit_ajustado
                 parametros.STOP_LOSS = stop_loss_ajustado
                 parametros.STOP_LOSS_INICIAL_TRAILING = stop_loss_ajustado
                 parametros.TRAILING_STOP = trailing_stop_ajustado
                 parametros.DISTANCIA_TRAILING_MAXIMA = abs(parametros.STOP_LOSS - parametros.TRAILING_STOP)
-                configuracion.explicacion_decision = explicacion
                 guardar_estadistica("Ajuste")
                 return accion, f"ℹ️  IA recomienda ajustar: {explicacion} - Hora log: {datetime.now().strftime('%H:%M')}"
             else:
@@ -139,9 +146,11 @@ def reevaluar_operacion():
                 
                 parametros.log_operacion = (
                     f"ℹ️  IA recomienda mantener\n"
-                    f"      Explicación         : {explicacion}\n"
                     f"      Próxima validación  : {parametros.velas_espera} velas ({hora_proxima_validacion.strftime('%H:%M')})\n"
-                    f"      Hora log            : {datetime.now().strftime('%H:%M')}"
+                    f"      Hora log            : {datetime.now().strftime('%H:%M')}\n\n"
+                    f"      Explicación\n"
+                    f"      ───────────────────────────────────\n"
+                    f" {configuracion.explicacion_decision}"
                 )
         else:
             parametros.error += f"No se ejecutó la IA -  Hora log: {datetime.now().strftime('%H:%M')}\n"
@@ -153,14 +162,14 @@ def ejecutar_operacion():
     operacion = debe_ejecutar_operacion()
 
     if not parametros.DEBUG:
-        if parametros.boton_comprar and operacion == "Comprar":                            
+        if parametros.boton_comprar and operacion == "Comprar":
                 parametros.boton_comprar.click()
                 parametros.bloqueo_ejecutar_orden = True
                 parametros.minuto_ultima_orden = time.strftime('%M')
                 parametros.hora_apertura_orden = time.time()
                 parametros.datos_mapeados['Operacion'] = "Compra"
                 guardar_estadistica("Compra")
-        elif parametros.boton_vender and operacion == "Vender":                            
+        elif parametros.boton_vender and operacion == "Vender":
                 parametros.boton_vender.click()
                 parametros.bloqueo_ejecutar_orden = True
                 parametros.minuto_ultima_orden = time.strftime('%M')

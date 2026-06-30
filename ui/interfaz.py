@@ -156,14 +156,7 @@ def ui_ema(parent_text_content, texto_componente, texto_ema_actual):
     return texto_ema_actual
 
 def ui_trailing(habilitado, activo, caida_desde_pico):
-    if not habilitado:
-        return (
-            f"{texto_separador}\n"
-            f" 🧭 TRAILING STOP\n"
-            f"  ───────────────────────────────────\n"
-            f"    Inactivo (Sin operaciones en ejecución)\n"
-        )
-    else:
+    if habilitado and parametros.activo_actual == parametros.datos_mapeados['Activo']:
         return (
                 f"{texto_separador}\n"
                 f" 🧭 TRAILING STOP\n"
@@ -174,23 +167,8 @@ def ui_trailing(habilitado, activo, caida_desde_pico):
                 f"   🔥 Stop Loss inicial : {parametros.STOP_LOSS_INICIAL_TRAILING:.2f}\n"
                 f"   🔥 Stop Loss actual  : {parametros.STOP_LOSS:.2f}\n"
             )
-
-def ui_stop_loss(activo):
-    if not activo:
-        return (
-            f"{texto_separador}\n"
-            f" 🧭 STOP LOSS ACTUAL\n"
-            f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: --\n"
-            f"   🔴 ACTUAL: --\n"
-        )
     else:
-        return (
-            f"{texto_separador}\n"
-            f" 🧭 STOP LOSS ACTUAL\n"
-            f"  ───────────────────────────────────\n"
-            f"   🔴 FIJADO: {parametros.STOP_LOSS:.1f}\n"
-        )
+        return None
 
 def ui_operacion_activa(activo):
     if activo and parametros.activo_actual == parametros.datos_mapeados['Activo']:
@@ -200,37 +178,69 @@ def ui_operacion_activa(activo):
             f"{texto_separador}\n"
             f"📌 [OPERACION]\n"
             f"  ───────────────────────────────────\n"
-            f"   Operación          : {parametros.datos_mapeados['Operacion']}\n"
-            f"   💱 Instrumento     : {parametros.datos_mapeados['Activo']} ({parametros.datos_mapeados['Tipo']})\n"
-            f"   📦 Volumen (Lotes) : {parametros.datos_mapeados['Volumen']}\n"
-            f"   🚀 Precio Apertura : {float(parametros.datos_mapeados['Precio Apertura'].replace(' ', ''))}\n"
-            f"   📊 Precio Actual   : {float(parametros.datos_mapeados['Precio Actual'].replace(' ', ''))}\n"
-            f"   {icono_beneficio} Beneficio Neto  : {parametros.datos_mapeados['Beneficio Neto']} ({parametros.datos_mapeados['Beneficio %']})\n\n"
+            f"   Operación            : {parametros.datos_mapeados['Operacion']}\n"
+            f"   💱 Instrumento       : {parametros.datos_mapeados['Activo']} ({parametros.datos_mapeados['Tipo']})\n"
+            f"   📦 Volumen (Lotes)   : {parametros.datos_mapeados['Volumen']}\n"
+            f"   🚀 Precio Apertura   : {float(parametros.datos_mapeados['Precio Apertura'].replace(' ', ''))}\n"
+            f"   📊 Precio Actual     : {float(parametros.datos_mapeados['Precio Actual'].replace(' ', ''))}\n"
+            f"   🔥 STOP LOSS INICIAL : {parametros.STOP_LOSS_INICIAL_TRAILING:.2f}\n"
+            f"   💰 TAKE PROFIT       : {parametros.TAKE_PROFIT:.2f}\n"
+            f"   💰 TAKE PROFIT USD   : {parametros.TAKE_PROFIT_USD:.2f}\n\n"
+            f"   {icono_beneficio} Beneficio Neto    : {parametros.datos_mapeados['Beneficio Neto']} ({parametros.datos_mapeados['Beneficio %']})\n"
             f"   Log operación\n"
             f"  ───────────────────────────────────\n"
             f"   {parametros.log_operacion}\n"
         )
-    else:
+    elif parametros.log_operacion != "":
         return (
             f"{texto_separador}\n"
             f"📌 SIN OPERACIONES ACTIVAS PARA {parametros.activo_actual}\n"
             f"  ───────────────────────────────────\n"
             f"   {parametros.log_operacion}"
         )
+    else:
+        return None
 
 def ui_estadisticas(motivo_cierre):
-    win_rate = (parametros.estadisticas_bot["ganadas"] / parametros.estadisticas_bot["total_ordenes"] * 100) if parametros.estadisticas_bot["total_ordenes"] > 0 else 0.0
+    if float(parametros.estadisticas_bot['total_ordenes']) > 0:
+        win_rate = (parametros.estadisticas_bot["ganadas"] / parametros.estadisticas_bot["total_ordenes"] * 100) if parametros.estadisticas_bot["total_ordenes"] > 0 else 0.0
 
-    return (
-        f"{texto_separador}\n"
-        " 📊 CUADRO DE ESTADISTICAS Y METRICAS DE EFECTIVIDAD (HOY):\n"
-        f"    └ Operaciones Ganadas  🟢 : {parametros.estadisticas_bot['ganadas']}\n"
-        f"    └ Operaciones Perdidas 🔴 : {parametros.estadisticas_bot['perdidas']}\n"
-        f"    └ Total Ejecutadas     ⚡ : {parametros.estadisticas_bot['total_ordenes']}\n"
-        f"    └ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate\n"
-        f"    └ Histórico de la cuenta  : {parametros.historico_cuenta}\n"
-        f"    └ Ultimo cierre           : {motivo_cierre}\n"
-    )
+        return (
+            f"{texto_separador}\n"
+            " 📊 CUADRO DE ESTADISTICAS Y METRICAS DE EFECTIVIDAD (HOY):\n"
+            f"    └ Operaciones Ganadas  🟢 : {parametros.estadisticas_bot['ganadas']}\n"
+            f"    └ Operaciones Perdidas 🔴 : {parametros.estadisticas_bot['perdidas']}\n"
+            f"    └ Total Ejecutadas     ⚡ : {parametros.estadisticas_bot['total_ordenes']}\n"
+            f"    └ Porcentaje de Acierto🎯 : {win_rate:.1f}% Win Rate\n"
+            f"    └ Histórico de la cuenta  : {parametros.historico_cuenta}\n"
+            f"    └ Último cierre           : {motivo_cierre}\n"
+        )
+    else:
+        return None
+
+def ui_tabla_valores():
+    if parametros.tabla_valores != "":
+        separador = "=" * 75 + "\n"
+        return  (
+            f"{separador}"
+            f" 📈 TABLA DE VALORES\n"
+            f"  ───────────────────────────────────\n"
+            f"{parametros.tabla_valores}"
+        )
+    else:
+        return None
+
+def ui_error():
+    if parametros.error != "":
+        separador = "=" * 75 + "\n"
+        return  (
+            f"{separador}"
+            f" 🔴 ÚLTIMO ERROR\n"
+            f"  ───────────────────────────────────\n"
+            f"{parametros.error}"
+        )
+    else:
+        return None
 
 def ui_datos_generales():
     return (
@@ -249,7 +259,7 @@ def ui_patrones():
         f" 📌 [PATRONES]\n"
         f"  ───────────────────────────────────\n"
         f" 🏷️  PATRON IDENTIFICADO     : {parametros.datos_graficos['patron']}\n"
-        f" 🟢 ULTIMO PATRON DETECTADO : {parametros.ultimo_patron}\n\n"
+        f" 🟢 ÚLTIMO PATRON DETECTADO : {parametros.ultimo_patron}\n\n"
         f"   Log operación\n"
         f"  ───────────────────────────────────"
         f"   {parametros.datos_graficos['log']}"
@@ -259,25 +269,22 @@ def indicador_habilitado(indicador):
     return parametros.CRITERIO_INDICADORES.get(indicador.upper(), False)
 
 # IMPRESIÓN ACTUALIZADA EN LA CONSOLA
-def ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre):
+def ui_general(texto_indicadores, texto_operacion_activa, texto_trailing, motivo_cierre):
+    estadisticas = ui_estadisticas(motivo_cierre)
+    tabla_valores = ui_tabla_valores()
+    error = ui_error()
+
     limpiar_pantalla()
     print("-" * 75)
     print(f" ROBOT OPERATIVO AUTOMÁTICO XTB | MONITOR DE RIESGO % NATIVO FIXED")
     print(f" Servidor activo: {time.strftime('%H:%M:%S')}")
     print(f"{ui_datos_generales()}")
     print(f"{texto_indicadores}")
-    print(f"{texto_operacion_activa}")
-    print(f"{texto_trailing}")
-    print(f"{texto_stop_loss}")
-    print("-" * 75)
-    print(f" 💰 TAKE PROFIT     : {parametros.TAKE_PROFIT:.2f}")
-    print(f" 💰 TAKE PROFIT USD : {parametros.TAKE_PROFIT_USD:.2f}")
-    print("-" * 75)
-    print(f" 🚦 FILTRO ENTRADAS : {'🔒 BLOQUEADO (Operación detectada)' if operacion_activa else '🔓 EN ESPERA DE SEÑAL'}")
-    print(f"{ui_estadisticas(motivo_cierre)}")
-    print("=" * 75)
-    print(f" 🔴 Ultimo error              : {parametros.error}")
-    print("=" * 75)
+    if texto_trailing is not None: print(f"{texto_trailing}")
+    if texto_operacion_activa is not None: print(f"{texto_operacion_activa}")
+    if estadisticas is not None: print(f"{estadisticas}")    
+    if tabla_valores is not None: print(f"{tabla_valores}")
+    if error is not None: print(f"{error}")
 
 def limpiar_pantalla():
     if os.name == 'nt':

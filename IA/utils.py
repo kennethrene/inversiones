@@ -1,5 +1,8 @@
 from typing import Dict, Any, Optional
 import configuracion.parametros as parametros
+import IA.configuracion as configuracion
+from tabulate import tabulate
+import re
 
 def formatear_velas_para_ia(datos, indicador):
     # Crear el encabezado para guiar la lectura del modelo
@@ -84,3 +87,51 @@ def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bo
                             item_modelo["modelo"], \
                             datos_ia.get("cache", False)
     return None
+
+from tabulate import tabulate
+
+def guardar_tabla_valores(velas):
+    headers = ["High", "Open", "Close", "Low", "B. Low", "M. Mid", "B. Up"]
+    filas = [
+        [
+            f"{v['High']:.1f}", f"{v['Open']:.1f}", f"{v['Close']:.1f}", 
+            f"{v['Low']:.1f}", f"{v['Lower']:.1f}", f"{v['Middle']:.1f}", 
+            f"{v['Upper']:.1f}"
+        ]
+        for v in velas[-5:]
+    ]
+
+    parametros.tabla_valores = tabulate(filas, headers=headers, tablefmt="simple")
+
+def formatear_analisis_IA(analisis):
+    # 1. Separar la explicación humana usando la etiqueta exacta
+    partes_explicacion = analisis.split("EXPLICACION=")
+    datos_tecnicos = partes_explicacion[0]
+    explicacion = "\n"+partes_explicacion[1].strip() if len(partes_explicacion) > 1 else ""
+
+    # 2. Expresión regular para capturar fórmulas matemáticas complejas
+    patron = r"([\w_]+)\s*=\s*(.*?)(?=\s*\||$)"
+    pares_encontrados = re.findall(patron, datos_tecnicos)
+
+    # 3. Limpiar espacios extras en los nombres y valores
+    datos_tabla = [(clave.strip(), valor.strip()) for clave, valor in pares_encontrados]
+
+    if not datos_tabla:
+        return
+
+    # 4. Calcular anchos adaptables basados en los textos más largos
+    ancho_param = max(max(len(p) for p, _ in datos_tabla), len("PARAMETRO"))
+    ancho_val = max(max(len(v) for _, v in datos_tabla), len("VALOR"))
+
+    # 5. Construir las líneas de la tabla en columnas limpias (formato simple)
+    lineas_tabla = []
+    
+    # Filas de datos continuas
+    for param, valor in datos_tabla:
+        lineas_tabla.append(f"      {param:<{ancho_param}}  : {valor:<{ancho_val}}")
+
+    # 6. Almacenar el bloque completo formateado
+    tabla_texto = "\n".join(lineas_tabla)
+    configuracion.explicacion_decision = f"{tabla_texto}\n{explicacion}"
+
+

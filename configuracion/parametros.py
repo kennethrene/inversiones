@@ -1,7 +1,8 @@
 import pandas as pd
 
 MOSTRAR_GRAFICO = False
-DEBUG = True # En True no realiza ninguna operación ... solo se conecta y muestra valores
+MOSTRAR_TABLA_VALORES = True
+DEBUG = False # En True no realiza ninguna operación ... solo se conecta y muestra valores
 DEBUG_QUITAR_VELAS = 19 # En modo debug, puedo simular comportamientos quitando estas X velas de la matriz de respuesa
 PORT = 9222
 # ============================================================================
@@ -66,7 +67,7 @@ REEVALUAR = False
 CRITERIO_INDICADORES = {
     "MACD": False,
     "RSI": False,
-    "BOLLINGER": True,
+    "BOLLINGER": False,
     "EMA": False
 }
 
@@ -159,6 +160,7 @@ ultimo_patron = "Ninguno"
 
 historico_cuenta = []
 log_operacion = ""
+tabla_valores = ""
 error = ""
 
 movimiento_abrupto = {

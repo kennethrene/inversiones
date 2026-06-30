@@ -9,7 +9,7 @@ import os
 import sys
 import configuracion.parametros as parametros
 from operaciones.ejecucion import ejecutar_operacion, validar_trailing_stop, reevaluar_operacion
-from ui.interfaz import ui_trailing, ui_stop_loss, ui_operacion_activa, ui_general
+from ui.interfaz import ui_trailing, ui_operacion_activa, ui_general
 from extraccion.datos_xtb import extraer_datos_operacion, obtener_datos_operaciones, obtener_datos_compra_venta
 from operaciones.cierre import operacion_debe_cerrar, ejecutar_cierre
 from indicadores.informacion import obtener_texto_indicadores, actualizar_informacion, precargar_datos
@@ -112,7 +112,6 @@ def bot_scalping():
                 ejecutar_cierre_operacion = False
                 
                 texto_trailing = ui_trailing(False, False, None)
-                texto_stop_loss = ui_stop_loss(False)
 
                 if operacion_activa and len(operaciones_detalles) > 0:
                     if parametros.hora_apertura_orden is None:
@@ -121,7 +120,6 @@ def bot_scalping():
 
                     extraer_datos_operacion(operaciones_detalles)
 
-                    texto_stop_loss         = ui_stop_loss(True)
                     texto_trailing          = validar_trailing_stop()
                     texto_operacion_activa  = ui_operacion_activa(True)
 
@@ -160,7 +158,7 @@ def bot_scalping():
                    ejecutar_cierre(driver, motivo_cierre)
 
                 # Impresión de la UI en la consola
-                ui_general(texto_indicadores, operacion_activa, texto_operacion_activa, texto_trailing, texto_stop_loss, motivo_cierre)
+                ui_general(texto_indicadores, texto_operacion_activa, texto_trailing, motivo_cierre)
                         
             except Exception as e_bucle:
                 parametros.error += traceback.format_exc()

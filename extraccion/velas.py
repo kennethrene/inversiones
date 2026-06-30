@@ -12,7 +12,7 @@ symbols = {
     "DE40": "GER30",
     "FRA40": "FRA40",
     "UK100": "UK100",
-    "HK.CASH": "HKG33",
+    "HK.cash": "HKG33",
     "GOLD": "XAUUSD",
     "COCOA": "COCOA",
     "COFFEE": "COFFEE",
@@ -65,7 +65,7 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas, indicador):
                 symbol=symbols.get(activo_actual),
                 exchange='FX', 
                 interval=intervalo,
-                n_bars=num_velas
+                n_bars=num_velas + 1
             )
             if df is not None and not df.empty:
                 break
@@ -82,20 +82,8 @@ def extraer_velas_para_IA(activo_actual, intervalo, num_velas, indicador):
         df.columns = ['Open', 'High', 'Low', 'Close']
         data = df.to_dict(orient='records')
 
-        if num_velas == 61:
-            parametros.lista_velas_acumuladas = data[:-1]
-            return data[:-1]
-
-        # --- ACTUALIZACIÓN DINÁMICA DE 'N' VELAS ---
-        # Verificamos que tengamos un historial base cargado previamente
-        if len(parametros.lista_velas_acumuladas) >= num_velas:
-            # Slices de Python: Reemplaza exactamente desde el índice [-num_velas] hasta el final
-            parametros.lista_velas_acumuladas[-num_velas:] = data
-            return parametros.lista_velas_acumuladas
-        else:
-            # Caso de contingencia si la lista acumulada está vacía o es menor que num_velas
-            parametros.lista_velas_acumuladas = data
-            return parametros.lista_velas_acumuladas
+        parametros.lista_velas_acumuladas = data
+        return data
     else:
         hora = datetime.now()
         parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')})\n"
@@ -118,7 +106,7 @@ def extraer_velas_para_indicadores(activo_actual, intervalo, num_velas):
                 symbol=symbols.get(activo_actual),
                 exchange='FX', 
                 interval=intervalo,
-                n_bars=num_velas
+                n_bars=num_velas + 1
             )
             if df is not None and not df.empty:
                 break
@@ -135,20 +123,8 @@ def extraer_velas_para_indicadores(activo_actual, intervalo, num_velas):
         df.columns = ['Open', 'High', 'Low', 'Close']
         data = df.to_dict(orient='records')
 
-        if num_velas == 121:
-            parametros.lista_velas_acumuladas = data[:-1]
-            return data[:-1]
-
-        # --- ACTUALIZACIÓN DINÁMICA DE 'N' VELAS ---
-        # Verificamos que tengamos un historial base cargado previamente
-        if len(parametros.lista_velas_acumuladas) >= num_velas:
-            # Slices de Python: Reemplaza exactamente desde el índice [-num_velas] hasta el final
-            parametros.lista_velas_acumuladas[-num_velas:] = data
-            return parametros.lista_velas_acumuladas
-        else:
-            # Caso de contingencia si la lista acumulada está vacía o es menor que num_velas
-            parametros.lista_velas_acumuladas = data
-            return parametros.lista_velas_acumuladas
+        parametros.lista_velas_acumuladas = data
+        return data
     else:
         hora = datetime.now()
         parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')})\n"
@@ -163,7 +139,7 @@ def extraer_velas_con_bollinger(activo_actual, intervalo, num_velas):
 
     # 1. Inicializar la conexión con TradingView
     tv = TvDatafeed()
-    df = None  
+    df = None
 
     # 2. Descargar las últimas X velas de FX
     while reintentos < max_reintentos:
@@ -197,33 +173,24 @@ def extraer_velas_con_bollinger(activo_actual, intervalo, num_velas):
     if df is not None:  # Ya sabemos con certeza que es un DataFrame válido con datos
         try:
             # Cálculo directo y seguro de Bandas de Bollinger sin depender del .ta accessor
-            bbands = ta.bbands(df['close'], length=20, std=2)
+            bbands = ta.bbands(df['close'], length=30, std=2)
             df = pd.concat([df, bbands], axis=1)
             
             # Filtro y renombre de columnas
-            df = df[['open', 'high', 'low', 'close', 'BBL_20_2.0', 'BBM_20_2.0', 'BBU_20_2.0']]
+            df = df[['open', 'high', 'low', 'close', 'BBL_30_2.0', 'BBM_30_2.0', 'BBU_30_2.0']]
             df.columns = ['Open', 'High', 'Low', 'Close', 'Lower', 'Middle', 'Upper']
-            
+           
         except Exception as e:
             hora = datetime.now()
-            parametros.error = f"Error al calcular Bandas de Bollinger ({hora.strftime('%H:%M')}): {str(e)}\n"
+            parametros.error += f"Error al calcular Bandas de Bollinger ({hora.strftime('%H:%M')}): {str(e)}\n"
             parametros.lista_velas_acumuladas = []
             return None
 
         # Convertir el DataFrame a una lista de diccionarios
         data = df.to_dict(orient='records')
 
-        if num_velas == 61:
-            parametros.lista_velas_acumuladas = data[:-1]
-            return data[:-1]
-
-        # --- ACTUALIZACIÓN DINÁMICA DE 'N' VELAS ---
-        if len(parametros.lista_velas_acumuladas) >= num_velas:
-            parametros.lista_velas_acumuladas[-num_velas:] = data
-            return parametros.lista_velas_acumuladas
-        else:
-            parametros.lista_velas_acumuladas = data
-            return parametros.lista_velas_acumuladas
+        parametros.lista_velas_acumuladas = data
+        return data
     else:
         hora = datetime.now()
         parametros.error = f"Error: No se recibieron datos de TradingView ({hora.strftime('%H:%M')})\n"

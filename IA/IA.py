@@ -6,32 +6,22 @@ import importlib
 import IA.gemini as gemini
 import IA.groq as groq
 import IA.utils as utils
+from datetime import datetime
+from IA.utils import guardar_tabla_valores
 
 def ejecutar_operacion():
-    num_velas = 1
+    num_velas = 61
     configuracion_prompt = utils.obtener_prompts_estrategia_activa(configuracion.TIPO_PROMPT)
-
-    if len(parametros.lista_velas_acumuladas) == 0:
-        num_velas = 61
 
     indicador = None
     if configuracion_prompt["indicadores"]:
         indicador = configuracion_prompt["indicador"]
 
     velas_M5 = extraer_velas_para_IA(parametros.activo_actual, Interval.in_5_minute, num_velas, indicador)
-    velas_H1 = extraer_velas_para_IA(parametros.activo_actual, Interval.in_1_hour, 30, None)
+    velas_H1 = extraer_velas_para_IA(parametros.activo_actual, Interval.in_1_hour, num_velas, indicador)
 
-    if parametros.DEBUG:
-        for vela in velas_M5[-5:]:
-            print(
-                f"High: {vela['High']:.5f} | "
-                f"Open: {vela['Open']:.5f} | "
-                f"Close: {vela['Close']:.5f} | "
-                f"Low: {vela['Low']:.5f} | "
-                f"B. Low: {vela['Lower']:.5f} | "
-                f"M. Mid: {vela['Middle']:.5f} | "
-                f"B. Up: {vela['Upper']:.5f}"
-            )
+    if parametros.MOSTRAR_TABLA_VALORES:        
+        guardar_tabla_valores(velas_M5[-5:])
 
     if velas_M5 is not None and len(velas_M5) > 0:
         nombre_ia, modelo, cache = utils.obtener_modelo_ia_activo(configuracion.MODELO_IA)
@@ -79,7 +69,7 @@ def ejecutar_operacion():
         else:
             return None
     else:
-        parametros.error = "IA - No se recibieron datos de velas\n"
+        parametros.error += f"IA - No se recibieron datos de velas - {datetime.now().strftime('%H:%M')}\n"
 
 def reevaluar_operacion():
     num_velas = parametros.velas_espera
@@ -140,4 +130,4 @@ def reevaluar_operacion():
         else:
             return None
     else:
-        parametros.error = "IA - No se recibieron datos de velas\n"
+        parametros.error += f"IA - No se recibieron datos de velas - {datetime.now().strftime('%H:%M')}\n"
