@@ -4,7 +4,7 @@ import IA.configuracion as configuracion
 from IA.utils import formatear_analisis_IA
 
 parametros.MOSTRAR_TABLA_VALORES = True
-parametros.activo_actual = "US30"
+parametros.activo_actual = "US100"
 parametros.datos_mapeados['Operacion'] = 'Compra'
 parametros.datos_mapeados['Precio Apertura'] = "30535.29"
 parametros.historico_rsi = [10, 20]

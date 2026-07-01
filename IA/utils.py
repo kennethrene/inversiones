@@ -6,7 +6,7 @@ import re
 
 def formatear_velas_para_ia(datos, indicador):
     # Crear el encabezado para guiar la lectura del modelo
-    if indicador is not None and indicador == "Bollinger":
+    if indicador is not None:
         lineas = ["Vela,Open,High,Low,Close"]
         #Bollinger no requiere agregar columnas. Dejo esta parte como ejemplo para futuros indicadores que si lo requieran.
         #lineas = ["Vela,Open,High,Low,Close,BolLow,BolMid,BolUp"]
@@ -26,7 +26,7 @@ def formatear_velas_para_ia(datos, indicador):
         low_p   = round(float(datos[i]['Low']), 2)
         close_p = round(float(datos[i]['Close']), 2)
 
-        if indicador is not None and indicador == "Bollinger":
+        if indicador is not None:
             low_bol   = round(float(datos[i]['Lower']), 2)
             mid_bol   = round(float(datos[i]['Middle']), 2)
             up_bol   = round(float(datos[i]['Upper']), 2)
@@ -90,19 +90,47 @@ def obtener_modelo_ia_activo(configuracion: dict) -> Optional[tuple[str, str, bo
 
 from tabulate import tabulate
 
-def guardar_tabla_valores(velas):
+def guardar_tabla_valores(velas, indicador):
+    if indicador is not None:
+        if indicador == "Bollinger-MACD":
+            guardar_tabla_valores_bollinger_macd(velas)
+        elif indicador == "Bollinger":
+            guardar_tabla_valores_bollinger(velas)
+    else:
+        headers = ["High", "Open", "Close", "Low"]
+        filas = [
+            [
+               f"{v['High']:.1f}", f"{v['Open']:.1f}", f"{v['Close']:.1f}", f"{v['Low']:.1f}"
+            ]
+            for v in velas[-5:]
+        ]
+
+        parametros.tabla_valores = tabulate(filas, headers=headers, tablefmt="simple")
+
+def guardar_tabla_valores_bollinger(velas, indicador):
     headers = ["High", "Open", "Close", "Low", "B. Low", "M. Mid", "B. Up"]
     filas = [
         [
-            f"{v['High']:.1f}", f"{v['Open']:.1f}", f"{v['Close']:.1f}", 
-            f"{v['Low']:.1f}", f"{v['Lower']:.1f}", f"{v['Middle']:.1f}", 
-            f"{v['Upper']:.1f}"
+            f"{v['High']:.1f}", f"{v['Open']:.1f}", f"{v['Close']:.1f}", f"{v['Low']:.1f}", 
+            f"{v['Lower']:.1f}", f"{v['Middle']:.1f}", f"{v['Upper']:.1f}"
         ]
         for v in velas[-5:]
     ]
 
     parametros.tabla_valores = tabulate(filas, headers=headers, tablefmt="simple")
 
+def guardar_tabla_valores_bollinger_macd(velas):
+    headers = ["High", "Open", "Close", "Low", "B. Low", "M. Mid", "B. Up", "MACD Hist", "MACD Verde", "MACD Roja"]
+    filas = [
+        [
+            f"{v['High']:.1f}", f"{v['Open']:.1f}", f"{v['Close']:.1f}", f"{v['Low']:.1f}", 
+            f"{v['Lower']:.1f}", f"{v['Middle']:.1f}", f"{v['Upper']:.1f}",
+            f"{v['MACD_Hist']:.1f}", f"{v['MACD']:.1f}", f"{v['MACD_Signal']:.1f}"
+        ]
+        for v in velas[-5:]
+    ]
+
+    parametros.tabla_valores = tabulate(filas, headers=headers, tablefmt="simple")
 def formatear_analisis_IA(analisis):
     # 1. Separar la explicación humana usando la etiqueta exacta
     partes_explicacion = analisis.split("EXPLICACION=")

@@ -15,13 +15,13 @@ TIPO_PROMPT = {
     "Híbrido": {
         "activo": True,
         "apertura": "PROMPT_HIBRIDO",
-        "version_apertura": "2_4i",
+        "version_apertura": "2_5i",
         "version_apertura_cache": "1_0i",
         "reevaluacion": "PROMPT_HIBRIDO_REEVALUACION",
         "version_reevaluacion": "1_0i",
         "version_reevaluacion_cache": "1_0i",
         "indicadores": True,
-        "indicador": "Bollinger"
+        "indicador": "Bollinger-MACD"
     }
 }
 

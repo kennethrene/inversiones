@@ -21,7 +21,7 @@ def ejecutar_operacion():
     velas_H1 = extraer_velas_para_IA(parametros.activo_actual, Interval.in_1_hour, num_velas, indicador)
 
     if parametros.MOSTRAR_TABLA_VALORES:        
-        guardar_tabla_valores(velas_M5[-5:])
+        guardar_tabla_valores(velas_M5[-5:], indicador)
 
     if velas_M5 is not None and len(velas_M5) > 0:
         nombre_ia, modelo, cache = utils.obtener_modelo_ia_activo(configuracion.MODELO_IA)

@@ -88,3 +88,75 @@ def determinar_tendencia(velas):
     # 3. MERCADO PLANO O EN ZIGZAG EN EL DÍA:
     else:
         return "Neutral_Rango"
+
+def determinar_tendencia_macd(velas):
+    # Lógica previa al prompt
+    v_actual = velas[-1]
+    v_anterior = velas[-2]
+
+    # 1. CÁLCULO DINÁMICO DE LA ZONA ACTUAL (Basado en Bandas de Bollinger)
+    precio_cierre = v_actual['Close']
+    b_superior = v_actual['Upper']
+    b_media = v_actual['Middle']
+    b_inferior = v_actual['Lower']
+
+    # Determinamos matemáticamente en qué sección del canal está el precio
+    if precio_cierre >= b_superior:
+        zona_actual = "TECHO_EXTREMO"
+    elif precio_cierre <= b_inferior:
+        zona_actual = "SUELO_EXTREMO"
+    elif precio_cierre > b_media:
+        zona_actual = "TECHO"  # Canal superior (compradores al mando)
+    else:
+        zona_actual = "SUELO"  # Canal inferior (vendedores al mando)
+
+    # 2. Detectar cruce de líneas MACD para el filtro de estados
+    if v_anterior['MACD'] < v_anterior['MACD_Signal'] and v_actual['MACD'] >= v_actual['MACD_Signal']:
+        filtro_macd = "Cruce_Alcista_Confirmado"
+    elif v_anterior['MACD'] > v_anterior['MACD_Signal'] and v_actual['MACD'] <= v_actual['MACD_Signal']:
+        filtro_macd = "Cruce_Bajista_Confirmado"
+    else:
+        filtro_macd = "Sin_Cruce_Inercia_Actual"
+
+    # 3. Dirección del Histograma
+    if v_actual['MACD_Hist'] > v_anterior['MACD_Hist']:
+        impulso_histograma = "Aceleracion_Alcista"
+    else:
+        impulso_histograma = "Aceleracion_Bajista"
+
+    # 4. Posición Estructural respecto a la línea de cero
+    if v_actual['MACD'] > 0:
+        posicion_cero = "Zona_Compradora_Alta"
+    else:
+        posicion_cero = "Zona_Vendedora_Baja"
+
+    # 5. Filtro de Fuerza/Separación
+    separacion_lineas = abs(v_actual['MACD'] - v_actual['MACD_Signal'])
+    separacion_anterior = abs(v_anterior['MACD'] - v_anterior['MACD_Signal'])
+    
+    if separacion_lineas > separacion_anterior:
+        fuerza_tendencia = "Fuerte_Abriéndose"
+    else:
+        fuerza_tendencia = "Debil_Compresión"
+
+    # 6. Mapeo final de decisión (Filtro de Seguridad Automático)
+    decision_seguridad = "Permitido"
+    
+    # Bloqueo en techos si el MACD sube con fuerza vertical extrema
+    if "TECHO" in zona_actual and posicion_cero == "Zona_Compradora_Alta" and fuerza_tendencia == "Fuerte_Abriéndose":
+        decision_seguridad = "Bloqueado_Fuerza_Alcista_Extrema"
+    
+    # Bloqueo en suelos si el MACD baja con fuerza vertical extrema
+    elif "SUELO" in zona_actual and posicion_cero == "Zona_Vendedora_Baja" and fuerza_tendencia == "Fuerte_Abriéndose":
+        decision_seguridad = "Bloqueado_Fuerza_Bajista_Extrema"
+
+    return {
+        "zona_actual": zona_actual,
+        "filtro_macd": filtro_macd,
+        "impulso_histograma": impulso_histograma,
+        "posicion_cero": posicion_cero,
+        "fuerza_tendencia": fuerza_tendencia,
+        "macd_seguridad": decision_seguridad,
+        "macd_valor": f"{v_actual['MACD']:.2f}",
+        "hist_valor": f"{v_actual['MACD_Hist']:.2f}"
+    }
